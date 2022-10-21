@@ -1,0 +1,18 @@
+<h1>Show Drink</h1>
+
+<ul>
+
+  <li>
+    <strong>Name:</strong>
+    <%= @drink.name %>
+  </li>
+
+  <li>
+    <strong>Temperature:</strong>
+    <%= @drink.temperature %>
+  </li>
+
+</ul>
+
+<span><%= link "Edit", to: Routes.drink_path(@conn, :edit, @drink) %></span> |
+<span><%= link "Back", to: Routes.drink_path(@conn, :index) %></span>
