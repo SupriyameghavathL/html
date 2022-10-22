@@ -20,7 +20,8 @@ defmodule Gruppie.MixProject do
   def application do
     [
       mod: {Gruppie.Application, []},
-      extra_applications: [:logger, :runtime_tools, :phoenix, :phoenix_html, :phoenix_live_reload, :plug_cowboy, :mongodb, :ex_phone_number]
+      extra_applications: [:logger, :runtime_tools, :phoenix, :phoenix_html, :phoenix_live_reload, :plug_cowboy, :mongodb, :ex_phone_number,
+                           :comeonin, :timex, :bcrypt_elixir]
     ]
   end
 
@@ -44,11 +45,13 @@ defmodule Gruppie.MixProject do
       {:swoosh, "~> 1.3"},
       {:telemetry_metrics, "~> 0.6"},
       {:telemetry_poller, "~> 1.0"},
-      {:gettext, "~> 0.18"},
       {:jason, "~> 1.2"},
       {:plug_cowboy, "~> 2.5"},
       {:mongodb, "~> 1.0.0-beta.1"},
       {:ex_phone_number,git: "https://github.com/socialpaymentsbv/ex_phone_number.git", branch: "develop"}, #liip phonenumber library
+      #{:comeonin, "~> 5.3"},
+      {:timex, "~> 3.7"},
+      {:bcrypt_elixir, "~> 3.0"}
     ]
   end
 

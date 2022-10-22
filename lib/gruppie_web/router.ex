@@ -61,6 +61,10 @@ defmodule GruppieWeb.Router do
     pipe_through :api
     scope "/v1", V1, as: :v1 do
       post "/user/exist", SecurityController, :userExist #verified
+      post "/user/exist/category/app", SecurityController, :userExistCategoryApp #verified
+      post "/register", SecurityController, :register #verified
+      post "/register/category/app", SecurityController, :registerIndividualCategory #verified
+      post "/verify/otp/category/app", SecurityController, :verifyOtpCategoryApp #verified
     end
 
   end
