@@ -47,6 +47,23 @@ config :logger, :console,
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
 
+config :guardian, Guardian,
+  allowed_algos: ["ES512"], #optional, algorithm used with secret key to sign
+  verify_module: Guardian.JWT, #Provides a mechanism to setup your own validations for items in the token
+  issuer: "Gruppie", #entry to put issuer of the token
+  #ttl: {1, :days}, #ttl for token
+  verify_issuer: true, #the issuer will be verified to be the same issuer as specified in the issuer field
+  allowed_drift: 2000,
+  #secret_key: %{"k" => "7duE1P9bnhUjeLuVCbe6CA", "kty" => "oct"},
+  secret_key: %{"alg" => "ES512", "crv" => "P-521",
+                  "d" => "AcmkDtWepfXO77LvtLJc3oYl6NavStm1MhyvEHPSgyzb7NznBPNI7w6v0rDIxWRpRF6_N5e5BQUKm4hahO24TlJW",
+                  "kty" => "EC", "use" => "sig",
+                  "x" => "ALrPX_9CAWLDlqPk1MBE9IAUOHbBE_jjE5uXSYGoBPDZFOAOt3fNh-qRMYNZ_WEnyuYSfLNrLbfu3ue0kcry-kd2",
+                  "y" => "AFbIFegFODslhVO8XUFmGGxEqBFs96UTu9sbAeodryVVF1bYayS4hkoMRATH--2ehWTNu9MYpCq7Hk7cpM6nAkSW"
+              },   #key used to sign token[link: https://github.com/ueberauth/guardian/issues/152]
+  serializer: Gruppie.Serializer.GuardianSerializer #The serializer that serializes the 'sub' (Subject) field into and out of the token.
+
+
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{config_env()}.exs"

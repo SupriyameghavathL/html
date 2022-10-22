@@ -65,6 +65,7 @@ defmodule GruppieWeb.Router do
       post "/register", SecurityController, :register #verified
       post "/register/category/app", SecurityController, :registerIndividualCategory #verified
       post "/verify/otp/category/app", SecurityController, :verifyOtpCategoryApp #verified
+      put "/create/password/category/app", SecurityController, :createPasswordCategoryApp #verified
     end
 
   end

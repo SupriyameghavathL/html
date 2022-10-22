@@ -1,6 +1,4 @@
 defmodule GruppieWeb.UserCategoryApp do
-  alias GruppieWeb.Handler.TimeNow
-  import GruppieWeb.Repo.RepoHelper
 
 
   def register_category(conn, changeset, userId, verify_otp) do

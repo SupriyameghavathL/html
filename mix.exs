@@ -10,7 +10,8 @@ defmodule Gruppie.MixProject do
       compilers: Mix.compilers(),
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
-      deps: deps()
+      deps: deps(),
+      elixirc_options: [debug_info: Mix.env() == :dev]
     ]
   end
 

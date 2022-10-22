@@ -3,11 +3,12 @@ defmodule GruppieWeb.Api.V1.SecurityController do
   # alias GruppieWeb.Repo.SecurityRepo
   alias GruppieWeb.Handler.SecurityHandler
   alias GruppieWeb.User
-  # alias GruppieWeb.Repo.GroupRepo
+  alias GruppieWeb.Repo.GroupRepo
   alias GruppieWeb.Repo.SecurityRepo
   alias GruppieWeb.Repo.UserRepo
   # alias GruppieWeb.Repo.GroupMembershipRepo
   alias GruppieWeb.Structs.JsonErrorResponse
+  alias GruppieWeb.ChangePassword
 
 
   #to check whether user exist in gruppie or not
@@ -292,7 +293,7 @@ defmodule GruppieWeb.Api.V1.SecurityController do
     else
       conn
       |> put_status(400)
-      |> render(Gruppie.SecurityView, "error.json", [ error: changeset.errors, status: 400 ])
+      |> render(GruppieWeb.SecurityView, "error.json", [ error: changeset.errors, status: 400 ])
     end
   end
 
@@ -336,7 +337,7 @@ defmodule GruppieWeb.Api.V1.SecurityController do
     else
       conn
       |> put_status(400)
-      |> render(Gruppie.SecurityView, "error.json", [ error: changeset.errors, status: 400 ])
+      |> render(GruppieWeb.SecurityView, "error.json", [ error: changeset.errors, status: 400 ])
     end
   end
 
@@ -361,12 +362,232 @@ defmodule GruppieWeb.Api.V1.SecurityController do
     else
       conn
       |> put_status(400)
-      |> render(Gruppie.SecurityView, "error.json", [ error: changeset.errors, status: 400 ])
+      |> render(GruppieWeb.SecurityView, "error.json", [ error: changeset.errors, status: 400 ])
     end
   end
 
 
 
+  #create password for category app
+  #put "/create/password/category/app?category="
+  def createPasswordCategoryApp(conn, params) do
+    if conn.query_params["category"] do
+      #create password to category types app
+      createPasswordForCategoryApp(conn, params)
+    else
+      if conn.query_params["constituencyName"] do
+        #create password to constituency app
+        createPasswordForConstituencyApp(conn, params)
+      else
+        #not found error
+        conn
+        |>put_status(400)
+        |>json(%JsonErrorResponse{code: 400, title: "Not Found", message: "Page Not Found"})
+      end
+    end
+  end
 
 
+  #create password to category types app
+  defp createPasswordForCategoryApp(conn, params) do
+    parameters = %{
+      "countryCode" => params["userName"]["countryCode"],
+      "phone" => params["userName"]["phone"],
+      "otp" => params["otp"],
+      "password" => params["password"],
+      "confirmPassword" => params["confirmPassword"]
+    }
+    category = conn.query_params["category"]
+    if is_nil(category) do
+      conn
+      |>put_status(404)
+      |>json(%JsonErrorResponse{code: 404, title: "Not Found", message: "User Not Found/Registered"})
+    else
+      changeset = ChangePassword.changeset_create_password(%ChangePassword{}, parameters)
+      if changeset.valid? do
+        #update password to category app
+        case SecurityHandler.createPasswordCategoryApp(changeset.changes, category) do
+          {:ok, updated} ->
+            login_category_app(conn, params)
+          {:error, message} ->
+            conn
+            |>put_status(400)
+            |>json(%JsonErrorResponse{code: 400, title: "Bad Request", message: message})
+          {:mongo_error, error}->
+            conn
+            |>put_status(500)
+            |>json(%JsonErrorResponse{code: 500, title: "DB Error", message: "Something went wrong"})
+        end
+      else
+        conn
+        |> put_status(400)
+        |> render(GruppieWeb.SecurityView, "error.json", [ error: changeset.errors, status: 400 ])
+      end
+    end
+  end
+
+
+  #create password to constituency types app
+  defp createPasswordForConstituencyApp(conn, params) do
+    parameters = %{
+      "countryCode" => params["userName"]["countryCode"],
+      "phone" => params["userName"]["phone"],
+      "otp" => params["otp"],
+      "password" => params["password"],
+      "confirmPassword" => params["confirmPassword"]
+    }
+    constituencyName = conn.query_params["constituencyName"]
+    if is_nil(constituencyName) do
+      conn
+      |>put_status(404)
+      |>json(%JsonErrorResponse{code: 404, title: "Not Found", message: "User Not Found/Registered"})
+    end
+    changeset = ChangePassword.changeset_create_password(%ChangePassword{}, parameters)
+    if changeset.valid? do
+      #update password to category app
+      case SecurityHandler.createPasswordConstituencyApp(changeset.changes, constituencyName) do
+        {:ok, updated} ->
+          login_category_app(conn, params)
+        {:error, message} ->
+          conn
+          |>put_status(400)
+          |>json(%JsonErrorResponse{code: 400, title: "Bad Request", message: message})
+        {:mongo_error, error}->
+          conn
+          |>put_status(500)
+          |>json(%JsonErrorResponse{code: 500, title: "DB Error", message: "Something went wrong"})
+      end
+    else
+      conn
+      |> put_status(400)
+      |> render(GruppieWeb.SecurityView, "error.json", [ error: changeset.errors, status: 400 ])
+    end
+  end
+
+
+  #post "/login/category/app"?category=school # &appName=RPES/{"appNames" to provide institutional app all in one}
+  def login_category_app(conn, params) when is_map(params) do
+    if conn.query_params["constituencyName"] do
+      #login to constituency app
+      loginToConstituencyApp(conn, params)
+    else
+      category = conn.query_params["category"]
+      appName = conn.query_params["appName"]
+      #text conn, params
+      case validate_params(params, conn) do
+        true->
+          case SecurityRepo.login_category_app(params, category) do
+            {:ok, result}->
+              #save device token and device type for user
+              if params["deviceToken"] do
+                #SecurityHandler.saveDeviceTokenCategoryApp(device_params, result["userId"], category)
+                SecurityHandler.saveDeviceTokenCategoryApp(params, result["userId"], category)
+              end
+              #remove authorizedToAdmin event for login user
+              GroupRepo.removeAuthorizedToAdminEventForLoginUser(result["userId"])
+              jwt = generate_jwt_token(conn, result)
+              countryTelCode = TelCodeRepo.countryTelCode(params["userName"]["countryCode"])
+              token_map = %{
+                "userId" => BSON.ObjectId.encode!(result["userId"]),
+                "token" => jwt["jwt"],
+                "countryAlpha2Code" => params["userName"]["countryCode"],
+                "counryTelephoneCode" => countryTelCode,
+                "voterId" => result["voterId"]
+              }
+
+              id_deleted_map = Map.delete(result, "_id")
+              merged_map = Map.merge(id_deleted_map, token_map)
+              delete_pwd_map = Map.delete(merged_map, "password")
+              #get total number of groups for user with this category
+              case SecurityHandler.getCategoryGroupsCountForUser(result["userId"], category, appName) do
+                {:ok, map}->
+                  #return map
+                  json conn, Map.merge(delete_pwd_map, map)
+                {:error, message}->
+                  conn
+                  |>put_status(403)
+                  |>json(%JsonErrorResponse{ code: 403, title: "Forbidden", message: message })
+              end
+            {:error, _error}->
+              conn
+              |>put_status(400)
+              |>json(%JsonErrorResponse{ code: 400, title: "Invalid Data", message: "Invalid UserName" })
+            {:not_found, _error}->
+              conn
+              |>put_status(401)
+              |>json(%JsonErrorResponse{ code: 401, title: "Invalid Credentials", message: "Invalid UserName Or Password" })
+          end
+        false->
+          conn
+          |>put_status(401)
+          |>json(%JsonErrorResponse{ code: 401, title: "Invalid Credentials", message: "Enter Username And Password" })
+      end
+    end
+  end
+
+
+  #login to constituency app
+  defp loginToConstituencyApp(conn, params) do
+    constituencyName = conn.query_params["constituencyName"]
+    case validate_params(params, conn) do
+      true ->
+        case SecurityRepo.login_constituency_app(params, constituencyName) do
+          {:ok, result}->
+            #save device token and device type for user
+            if params["deviceToken"] do
+              #SecurityHandler.saveDeviceTokenCategoryApp(device_params, result["userId"], category)
+              SecurityHandler.saveDeviceTokenConstituencyApp(params, result["userId"], constituencyName)
+            end
+            #remove authorizedToAdmin event for login user
+            GroupRepo.removeAuthorizedToAdminEventForLoginUser(result["userId"])
+            jwt = generate_jwt_token(conn, result)
+            countryTelCode = TelCodeRepo.countryTelCode(params["userName"]["countryCode"])
+            token_map = %{
+              "userId" => BSON.ObjectId.encode!(result["userId"]),
+              "token" => jwt["jwt"],
+              "countryAlpha2Code" => params["userName"]["countryCode"],
+              "counryTelephoneCode" => countryTelCode,
+              "voterId" => result["voterId"]
+            }
+            id_deleted_map = Map.delete(result, "_id")
+            merged_map = Map.merge(id_deleted_map, token_map)
+            delete_pwd_map = Map.delete(merged_map, "password")
+            #get total number of groups for user with this category
+            case SecurityHandler.getConstituencyGroupsCountForUser(result["userId"], constituencyName) do
+              {:ok, map}->
+                #return map
+                json conn, Map.merge(delete_pwd_map, map)
+              {:error, message}->
+                conn
+                |>put_status(403)
+                |>json(%JsonErrorResponse{ code: 403, title: "Forbidden", message: message })
+            end
+          {:error, _error}->
+            conn
+            |>put_status(400)
+            |>json(%JsonErrorResponse{ code: 400, title: "Invalid Data", message: "Invalid UserName" })
+          {:not_found, _error}->
+            conn
+            |>put_status(401)
+            |>json(%JsonErrorResponse{ code: 401, title: "Invalid Credentials", message: "Invalid UserName Or Password" })
+        end
+      false ->
+        conn
+        |>put_status(401)
+        |>json(%JsonErrorResponse{ code: 401, title: "Invalid Credentials", message: "Enter Username And Password" })
+    end
+  end
+
+
+   #generate jwt token for login and change password
+   defp generate_jwt_token(conn, result) do
+    new_conn = Guardian.Plug.api_sign_in(conn, result)
+    jwt = Guardian.Plug.current_token(new_conn)
+    {:ok, claims } = Guardian.Plug.claims(new_conn)
+    exp  = Map.get(claims, "exp")
+    jwt = %{
+      "jwt" => jwt,
+      "exp" => exp
+    }
+  end
 end
