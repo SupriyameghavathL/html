@@ -22,7 +22,7 @@ defmodule Gruppie.MixProject do
     [
       mod: {Gruppie.Application, []},
       extra_applications: [:logger, :runtime_tools, :phoenix, :phoenix_html, :phoenix_live_reload, :plug_cowboy, :mongodb, :ex_phone_number,
-                           :comeonin, :timex, :bcrypt_elixir]
+                           :comeonin, :timex, :bcrypt_elixir, :guardian, :httpoison, :phone, :date_time_parser]
     ]
   end
 
@@ -52,7 +52,12 @@ defmodule Gruppie.MixProject do
       {:ex_phone_number,git: "https://github.com/socialpaymentsbv/ex_phone_number.git", branch: "develop"}, #liip phonenumber library
       #{:comeonin, "~> 5.3"},
       {:timex, "~> 3.7"},
-      {:bcrypt_elixir, "~> 3.0"}
+      {:bcrypt_elixir, "~> 3.0"},
+      {:guardian, "~> 2.3"},
+      {:httpoison, "~> 1.8"},
+      {:phone, "~> 0.5.6"},
+      {:recase, "~> 0.7.0"},
+      {:date_time_parser, "~> 1.1"}
     ]
   end
 

@@ -6,8 +6,8 @@ defmodule GruppieWeb.User do
 
 
 
-  # @update_fields [ :name, :email, :gender, :dob, :image, :occupation, :qualification, :address, :voterId, :aadharNumber, :education,
-                  #  :caste, :religion, :bloodGroup, :designation, :subcaste, :category, :roleOnConstituency ]
+  @update_fields [ :name, :email, :gender, :dob, :image, :occupation, :qualification, :address, :voterId, :aadharNumber, :education,
+                   :caste, :religion, :bloodGroup, :designation, :subcaste, :category, :roleOnConstituency ]
 
   @verify_otp_fields [:countryCode, :phone, :otp]
 
@@ -45,7 +45,7 @@ defmodule GruppieWeb.User do
     field :caste, :string
     field :staffId, :string
     field :designation, :string
-    field :education, :string
+    #field :education, :string
     field :subcaste, :string
     field :category, :string
     field :roleOnConstituency, :string
@@ -57,6 +57,19 @@ defmodule GruppieWeb.User do
     field :bankIfscCode, :string
     field :staffType, :string
     field :profession, :string
+    #constituency extra field
+    field :willVote, :string
+    field :nonResidentialVoter, :string
+    field :influencer, :string
+    field :noOfVotes, :string
+    field :typeOfInfluencer, :string
+    field :constituency, :string
+    field :appName, :string
+    field :state, :string
+    field :district, :string
+    field :taluk, :string
+    field :place, :string
+    field :serachName, :string
     field :insertedAt, :string
     field :updatedAt, :string
   end
@@ -74,8 +87,26 @@ defmodule GruppieWeb.User do
 
   #struct returned here is an elixir changeset not a user struct
   def changeset_user_register(struct, params \\%{}) do
+    state = if Map.has_key?(params, "state") do
+      String.downcase(params["state"])
+    end
+    district = if Map.has_key?(params, "district") do
+      String.downcase(params["district"])
+    end
+    taluk = if Map.has_key?(params, "taluk") do
+      String.downcase(params["taluk"])
+    end
+    place = if Map.has_key?(params, "place") do
+      String.downcase(params["place"])
+    end
+    params = params
+    |> Map.put("state", state)
+    |> Map.put("district", district)
+    |> Map.put("taluk", taluk)
+    |> Map.put("place", place)
     struct
-    |> cast(params, [:name, :email, :countryCode, :phone, :religion, :caste, :subcaste, :category, :designation, :education, :image, :dob]) #{param : struct [basically user struct [%User{}], param2 : parama, param3 : list od colums ned to update ]
+    |> cast(params, [:name, :email, :countryCode, :phone, :religion, :caste, :subcaste, :category, :designation,
+                     :image, :dob, :gender, :qualification, :constituency, :appName, :district, :taluk, :state, :place]) #{param : struct [basically user struct [%User{}], param2 : parama, param3 : list od colums ned to update ]
     |> validate_required(:phone, [message: "Phone Number Must Not Be Empty"])
     |> validate_required(:countryCode, [message: "Country Code Must Not Be Empty"])
     |> validate_required(:name, [message: "Name Must Not Be Empty"])
@@ -84,6 +115,7 @@ defmodule GruppieWeb.User do
     |> valid_phone_number
     |> valid_unique_number_on_register
     |> set_time
+    |> searchName(params)
   end
 
 
@@ -123,15 +155,33 @@ defmodule GruppieWeb.User do
 
   #struct returned here is an elixir changeset not a user struct
   def changeset_user_register_individual(struct, params \\%{}) do
+    state = if Map.has_key?(params, "state") do
+      String.downcase(params["state"])
+    end
+    district = if Map.has_key?(params, "district") do
+      String.downcase(params["district"])
+    end
+    taluk = if Map.has_key?(params, "taluk") do
+      String.downcase(params["taluk"])
+    end
+    place = if Map.has_key?(params, "place") do
+      String.downcase(params["place"])
+    end
+    params = params
+    |> Map.put("state", state)
+    |> Map.put("district", district)
+    |> Map.put("taluk", taluk)
+    |> Map.put("place", place)
     struct
-    |> cast(params, [:name, :email, :countryCode, :phone, :religion, :caste, :subcaste, :category, :designation, :education, :image, :dob]) #{param : struct [basically user struct [%User{}], param2 : parama, param3 : list od colums ned to update ]
+    |> cast(params, [:name, :email, :countryCode, :phone, :religion, :caste, :subcaste, :category, :designation,
+                     :image, :dob, :gender, :qualification, :constituency, :appName, :state, :district, :taluk, :place]) #{param : struct [basically user struct [%User{}], param2 : parama, param3 : list od colums ned to update ]
     |> validate_required(:phone, [message: "Phone Number Must Not Be Empty"])
     |> validate_required(:countryCode, [message: "Country Code Must Not Be Empty"])
     |> validate_required(:name, [message: "Name Must Not Be Empty"])
-    |> email_validation
     |> validate_format(:email, ~r/@/, [message: "Invalid Email Address"])
     |> valid_phone_number
     |> set_time
+    |> searchName(params)
   end
 
   def changeset_verify_otp_individual(struct, params) do
@@ -141,6 +191,89 @@ defmodule GruppieWeb.User do
     |> validate_required( :phone, [message: "Phone Number Must Not Be Empty"] )
     |> validate_required( :countryCode, [message: "Country Code Must Not Be Empty"] )
     |> valid_phone_number
+  end
+
+
+  #changeset on forgot password
+  def changeset_forgot_password(struct, params \\%{}) do
+    struct
+    |> cast(params, [:countryCode, :phone])
+    |> validate_required(:phone, [ message: "Phone Number Must Not Be Empty" ])
+    |> validate_required(:countryCode, [ message: "Country Code Must Not Be Empty"])
+    |> valid_phone_number
+    |> check_phone_number_exist
+  end
+
+
+
+  def changeset_user_update(changeset, params) do
+    changeset
+    |> cast(params, @update_fields)
+    |> validate_format(:email, ~r/@/, [message: "Invalid Email Address"])
+    |> validate_required(:name, [message: "Name Must Not Be Empty"])
+    |> set_time_updatedAt
+    |> validate_not_nil(@update_fields)
+  end
+
+
+  def validate_not_nil(changeset, fields) do
+    #IO.puts "#{changeset}"
+    Enum.reduce(fields, changeset, fn field, changeset ->
+      if get_field(changeset, field) == nil do
+        #add_error(changeset, field, "nil")
+        put_change(changeset, field, "")
+      else
+        changeset
+      end
+    end)
+  end
+
+
+  #update staff phone number
+  def updateStudentStaffPhoneNumber(struct, params \\%{}) do
+    struct
+    |> cast(params, [:countryCode, :phone])
+    |> validate_required(:countryCode, [message: "Must Not Be Empty"])
+    |> validate_required(:phone, [message: "Must Not Be Empty"])
+    |> valid_phone_number
+    |> put_change(:updatedAt, bson_time())
+  end
+
+
+  #user add to team changeset
+  def changeset_add_friend(struct, params \\%{}) do
+    struct
+    |> cast(params, [:name, :countryCode, :phone, :email])
+    |> validate_required(:phone, [message: "Phone Number Must Not Be Empty"])
+    |> validate_required(:countryCode, [message: "Country Code Must Not Be Empty"])
+    |> validate_required(:name, [message: "Name Must Not Be Empty"])
+    |> email_validation
+    |> valid_phone_number
+    |> set_time
+  end
+
+
+
+  #to check phone number exist for forget password
+  defp check_phone_number_exist(struct) do
+    if struct.valid? do
+      countryCode = get_field(struct, :countryCode) #get required valuen from struct
+      phone = get_field(struct, :phone)
+      case ExPhoneNumber.parse(phone, countryCode) do
+        {:ok, phone_number} ->
+          e164_number = ExPhoneNumber.format(phone_number, :e164)
+          {:ok, result} = SecurityRepo.findUserExistByPhoneNumber(e164_number)
+          if result > 0 do
+            struct
+          else
+            add_error(struct, :phone, "Phone Number Not Exists")
+          end
+        {:error, _}->
+          add_error(struct, :phone, "Invalid CountryCode/Phone Given")
+      end
+    else
+      struct
+    end
   end
 
 
@@ -177,6 +310,18 @@ defmodule GruppieWeb.User do
     struct
     |> put_change(:insertedAt, bson_time())
     |> put_change(:updatedAt, bson_time())
+  end
+
+
+  defp searchName(struct, params) do
+    struct
+    |> put_change( :searchName, String.downcase(params["name"]) )
+  end
+
+
+  defp set_time_updatedAt(struct) do
+    struct
+    |> put_change( :updatedAt, bson_time() )
   end
 
 

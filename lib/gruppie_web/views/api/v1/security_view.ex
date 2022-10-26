@@ -1,4 +1,4 @@
-defmodule GruppieWeb.SecurityView do
+defmodule GruppieWeb.Api.V1.SecurityView do
   use GruppieWeb, :view
 
   def render("error.json", %{ error: changeset, status: code }) do

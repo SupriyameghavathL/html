@@ -1,5 +1,6 @@
 defmodule GruppieWeb.Repo.GroupMembershipRepo do
   # import GruppieWeb.Repo.RepoHelper
+  alias GruppieWeb.GroupMembership
 
 
   @conn :mongo
@@ -15,5 +16,11 @@ defmodule GruppieWeb.Repo.GroupMembershipRepo do
     }
     project = %{"_id" => 1}
     Mongo.count(@conn, @group_team_members_col, filter, [projection: project])
+  end
+
+
+  def joinUserToGroup(loginUserId, groupObjectId) do
+    insertDoc = GroupMembership.insertGroupMemberWhileJoining(loginUserId, groupObjectId)
+    Mongo.insert_one(@conn, @group_team_members_col, insertDoc)
   end
 end
