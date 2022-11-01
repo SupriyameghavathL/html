@@ -1,7 +1,6 @@
 defmodule GruppieWeb.Repo.GroupPostRepo do
+  import GruppieWeb.Repo.RepoHelper
   import GruppieWeb.Handler.TimeNow
-
-
   @conn :mongo
 
   @group_team_members_col "group_team_members"
@@ -18,25 +17,68 @@ defmodule GruppieWeb.Repo.GroupPostRepo do
 
   @posts_saved_col "posts_saved"
 
-  # @view_posts_saved_col "VW_POSTS_SAVED"
+  @view_posts_saved_col "VW_POSTS_SAVED"
 
-  # @post_report_col "post_reports"
+  @post_report_col "post_reports"
 
-  # @school_calendar_col "school_calendar"
+  @school_calendar_col "school_calendar"
 
-  # @classSubject_col "class_subjects"
+  @classSubject_col "class_subjects"
 
-  # @classBooks_col "class_ebooks"
+  @classBooks_col "class_ebooks"
 
-  # @teams_col "teams"
+  @teams_col "teams"
 
-  # @view_teams_ebooks_details_col "VW_TEAMS_EBOOKS_DETAILS"
+  @view_teams_ebooks_details_col "VW_TEAMS_EBOOKS_DETAILS"
 
   @users_col "users"
 
   @saved_notifications_coll "saved_notifications"
 
+  #@zoom_hosts_col "zoom_hosts"
 
+
+  def getGroupPostReadMore(groupObjectId, postObjectId) do
+    filter = %{"_id" => postObjectId,"groupId" => groupObjectId,"isActive" => true}
+    pipeline = [%{ "$match" => filter }]
+    hd(Enum.to_list(Mongo.aggregate(@conn, @view_post_col, pipeline)))
+  end
+
+
+  def getGroupAlbumReadMore(groupObjectId, albumObjectId) do
+    filter = %{"_id" => albumObjectId, "groupId" => groupObjectId, "isActive" => true }
+    hd(Enum.to_list(Mongo.find(@conn, @gallery_col, filter)))
+  end
+
+  #find gallery album exist or not
+  def findAlbumExistById(groupObjectId, albumObjectId) do
+    filter = %{"_id" => albumObjectId, "groupId" => groupObjectId, "isActive" => true }
+    project = %{"_id" => 1}
+    Mongo.count(@conn, @gallery_col, filter, [projection: project])
+  end
+
+  #find post by _id
+  def findPostById(groupObjectId, postObjectId) do
+    filter = %{ "_id" => postObjectId, "groupId" => groupObjectId, "$or" => [%{"type" => "groupPost"}, %{"type" => "specialPost"}, %{"type" => "suggestionPost"}, %{"type" => "teamPost"}, %{"type" => "branchPost"}], "isActive" => true }
+    hd(Enum.to_list(Mongo.find(@conn, @post_col, filter, [limit: 1])))
+  end
+
+  #find post exit "isActive=true" by _id
+  def findPostExistById(groupObjectId, postObjectId) do
+    filter = %{ "_id" => postObjectId, "groupId" => groupObjectId, "type" => "groupPost", "isActive" => true }
+    project = %{"_id" => 1}
+    Mongo.count(@conn, @post_col, filter, [projection: project])
+  end
+
+
+  #add group post
+  def add(changeset, login_user_id, group_object_id) do
+    changeset = changeset
+    |> update_map_with_key_value(:groupId, group_object_id)
+    |> update_map_with_key_value(:userId, login_user_id)
+    |> update_map_with_key_value(:type, "groupPost")
+    Mongo.insert_one(@conn, @post_col, changeset)
+  end
 
 
   def getAll(conn, groupObjectId, limit) do
@@ -66,13 +108,6 @@ defmodule GruppieWeb.Repo.GroupPostRepo do
   end
 
 
-  def findPostIsSaved(loginUserId, groupObjectId, postObjectId) do
-    filter = %{ "groupId" => groupObjectId, "userId" => loginUserId, "postId" => postObjectId }
-    project = %{"_id" => 1}
-    Mongo.count(@conn, @posts_saved_col, filter, [projection: project])
-  end
-
-
   def getBdayUserDetail(bdayUserId) do
     filter = %{
       "_id" => bdayUserId
@@ -94,6 +129,21 @@ defmodule GruppieWeb.Repo.GroupPostRepo do
   end
 
 
+
+  #get posts unseen count / UP
+  def getGroupPostUnseenCount(login_user_id, group_object_id) do
+    lastSeenTime = getUserLastSeenTime(login_user_id, group_object_id)
+    filter = %{
+      "groupId" => group_object_id,
+      "type" => "groupPost",
+      "insertedAt" => %{ "$gt" => lastSeenTime["groupPostLastSeen"] }
+    }
+    project = %{"_id" => 1}
+    Mongo.count(@conn, @post_col, filter, [projection: project])
+  end
+
+
+
   #to check login user can post in group or not (for group post add auth)
   def checkLoginUserCanPostInGroup(groupObjectId, login_user_id) do
     filter = %{ "groupId" => groupObjectId, "userId" => login_user_id, "canPost" => true }
@@ -102,21 +152,165 @@ defmodule GruppieWeb.Repo.GroupPostRepo do
   end
 
 
-  #add group post
-  def add(changeset, login_user_id, group_object_id) do
-    changeset = changeset
-    |> Map.put(:groupId, group_object_id)
-    |> Map.put(:userId, login_user_id)
-    |> Map.put(:type, "groupPost")
-    Mongo.insert_one(@conn, @post_col, changeset)
+  #group post delete
+  def deletePost(groupObjectId, postObjectId) do
+    filter = %{ "_id" => postObjectId, "groupId" => groupObjectId, "isActive" => true, "$or" => [%{"type" => "groupPost"}, %{"type" => "suggestionPost"}, %{"type" => "branchPost"}]}
+    update = %{ "$set" => %{ "isActive" => false } }
+    Mongo.update_one(@conn, @post_col, filter, update)
   end
+
+
+  def removeNotificationFromGroup(postObjectId) do
+    filter = %{
+      "postId" => postObjectId
+    }
+    Mongo.delete_one(@conn, @saved_notifications_coll, filter)
+  end
+
+
+  #add/register eBooks for class/teams
+  def addEbooksForClasses(changeset, groupObjectId, loginUserId) do
+    changeset = changeset
+                |> update_map_with_key_value(:groupId, groupObjectId)
+                |> update_map_with_key_value(:userId, loginUserId)
+    Mongo.insert_one(@conn, @classBooks_col, changeset)
+  end
+
+
+  #get list of class-books registered forschool - with all classes
+  def getEbooksForSchool(groupObjectId) do
+    filter = %{
+      "groupId" => groupObjectId,
+      "isActive" => true
+    }
+    project = %{"_id" => 1, "className" => 1, "subjectBooks" => 1}
+    Enum.to_list(Mongo.find(@conn, @classBooks_col, filter, [projection: project, sort: %{"_id" => -1}]))
+  end
+
+
+  def getEbooksForTeamFromRegister(groupObjectId, teamObjectId) do
+    filter = %{
+      "_id" => teamObjectId,
+      "groupId" => groupObjectId,
+      "isActive" => true
+    }
+    #IO.puts "#{filter}"
+    project = %{"_id" => 0, "ebookDetails.subjectBooks" => 1}
+    pipeline = [%{"$match" => filter}, %{"$project" => project}]
+    Enum.to_list(Mongo.aggregate(@conn, @view_teams_ebooks_details_col, pipeline))
+  end
+
+  def addEbookForClass(changeset, groupObjectId, teamObjectId) do
+    filter = %{
+      "_id" => teamObjectId,
+      "groupId" => groupObjectId,
+      "isActive" => true
+    }
+    #add manual ebookdId for changeset
+    changeset = changeset
+                |> Map.put_new(:ebookId, new_object_id())
+    update = %{"$push" => %{"eBooks" => changeset}}
+    #IO.puts "#{update}"
+    Mongo.update_one(@conn, @teams_col, filter, update)
+  end
+
+
+  def getEbooksForTeam(groupObjectId, teamObjectId) do
+    filter = %{
+      "_id" => teamObjectId,
+      "groupId" => groupObjectId,
+      "isActive" => true
+    }
+    #IO.puts "#{filter}"
+    project = %{"_id" => 0, "eBooks" => 1}
+    hd(Enum.to_list(Mongo.find(@conn, @teams_col, filter, [projection: project])))
+  end
+
+
+  def removeEbooksForClass(groupObjectId, teamObjectId, ebookObjectId) do
+    filter = %{
+      "_id" => teamObjectId,
+      "groupId" => groupObjectId,
+      "isActive" => true,
+      "eBooks.ebookId" => ebookObjectId
+    }
+    #update = %{"$pull" => %{"eBooks.$.ebookId" => ebookObjectId}}
+    update = %{"$pull" => %{"eBooks" => %{"ebookId" => ebookObjectId}}}
+    #IO.puts "#{update}"
+    Mongo.update_one(@conn, @teams_col, filter, update)
+  end
+
+
+  #delete/remove ebook from register/list
+  def deleteEbook(groupObjectId, bookObjectId) do
+    #set isActive = false in class_ebooks coll
+    filter = %{
+      "groupId" => groupObjectId,
+      "_id" => bookObjectId,
+      "isActive" => true
+    }
+    update = %{ "$set" => %{"isActive" => false} }
+    Mongo.update_one(@conn, @classBooks_col, filter, update)
+
+    #remove ebooks from teams where this is used
+    filter = %{
+      "groupId" => groupObjectId,
+      "ebookId" => bookObjectId
+    }
+    #IO.puts "#{filter}"
+    update = %{"$unset" => %{"ebookId" => bookObjectId}}
+    Mongo.update_many(@conn, @teams_col, filter, update)
+  end
+
+  ###****OLDER VERSION****####
+  #add eBook for already created team without ebook
+  def addEbookForClassFromRegister(groupObjectId, teamObjectId, ebookObjectId) do
+    filter = %{
+      "_id" => teamObjectId,
+      "groupId" => groupObjectId,
+      "isActive" => true
+    }
+    update = %{"$set" => %{"ebookId" => ebookObjectId}}
+    Mongo.update_one(@conn, @teams_col, filter, update)
+  end
+
+
+
+  #add subject for class
+  def addSubjectForClass(changeset, groupObjectId, loginUserId) do
+    changeset = changeset
+                |> update_map_with_key_value(:groupId, groupObjectId)
+                |> update_map_with_key_value(:userId, loginUserId)
+    Mongo.insert_one(@conn, @classSubject_col, changeset)
+  end
+
+
+  #get class subjects list
+  def getClassSubjects(groupObjectId) do
+    filter = %{ "groupId" => groupObjectId, "isActive" => true }
+    Mongo.find(@conn, @classSubject_col, filter)
+  end
+
+
+  def updateSubjects(changeset, groupObjectId, subjectObjectId) do
+    filter = %{ "_id" => subjectObjectId, "groupId" => groupObjectId, "isActive" => true }
+    update = %{ "$set" => %{ "name" => changeset.name, "classSubjects" => changeset.classSubjects, "updatedAt" => bson_time() } }
+    Mongo.update_one(@conn, @classSubject_col, filter, update)
+  end
+
+
+  def deleteSubject(groupObjectId, subjectObjectId) do
+    filter = %{ "_id" => subjectObjectId, "groupId" => groupObjectId, "isActive" => true }
+    Mongo.delete_one(@conn, @classSubject_col, filter)
+  end
+
 
 
   #add album to gallery
   def addAlbumToGallery(changeset, loginUserId, groupObjectId) do
-    changeset
-    |> Map.put(:groupId, groupObjectId)
-    |> Map.put(:userId, loginUserId)
+    changeset = changeset
+                |> update_map_with_key_value(:groupId, groupObjectId)
+                |> update_map_with_key_value(:userId, loginUserId)
     Mongo.insert_one(@conn, @gallery_col, changeset)
   end
 
@@ -147,18 +341,18 @@ defmodule GruppieWeb.Repo.GroupPostRepo do
 
   #add vendors
   def addVendor(changeset, loginUserId, groupObjectId) do
-    changeset
-    |> Map.put(:groupId, groupObjectId)
-    |> Map.put(:userId, loginUserId)
+    changeset = changeset
+                |> update_map_with_key_value(:groupId, groupObjectId)
+                |> update_map_with_key_value(:userId, loginUserId)
     Mongo.insert_one(@conn, @vendor_col, changeset)
   end
 
 
   #add code of conduct
   def addCoc(changeset, loginUserId, groupObjectId) do
-    changeset
-    |> Map.put(:groupId, groupObjectId)
-    |> Map.put(:userId, loginUserId)
+    changeset = changeset
+                |> update_map_with_key_value(:groupId, groupObjectId)
+                |> update_map_with_key_value(:userId, loginUserId)
     Mongo.insert_one(@conn, @coc_col, changeset)
   end
 
@@ -184,6 +378,21 @@ defmodule GruppieWeb.Repo.GroupPostRepo do
   end
 
 
+  def getGalleryUnseenCount(loginUserId, groupObjectId) do
+    filter = %{"groupId" => groupObjectId, "userId" => loginUserId}
+    projection = %{ "_id" => 0, "galleryLastSeen" => 1 }
+    lastSeenTime = hd(Enum.to_list(Mongo.find(@conn, @group_team_members_col, filter, [projection: projection])))
+    #get gallery post count greater the last seen count
+    filterPost = %{
+      "groupId" => groupObjectId,
+      "insertedAt" => %{ "$gt" => lastSeenTime["galleryLastSeen"] },
+      "isActive" => true
+    }
+    project = %{"_id" => 1}
+    Mongo.count(@conn, @gallery_col, filterPost, [projection: project])
+  end
+
+
   #get total album count in gallery of group
   def getTotalAlbumCount(group_object_id) do
     filter = %{"groupId" => group_object_id, "isActive" => true }
@@ -201,45 +410,6 @@ defmodule GruppieWeb.Repo.GroupPostRepo do
   def getCoc(groupObjectId) do
     filter = %{ "groupId" => groupObjectId, "isActive" => true}
     Enum.to_list(Mongo.find(@conn, @coc_col, filter, [ sort: %{ "_id" => -1 } ]))
-  end
-
-  #find post by _id
-  def findPostById(groupObjectId, postObjectId) do
-    filter = %{ "_id" => postObjectId, "groupId" => groupObjectId, "$or" => [%{"type" => "groupPost"}, %{"type" => "specialPost"}, %{"type" => "suggestionPost"}, %{"type" => "teamPost"}, %{"type" => "branchPost"}], "isActive" => true }
-    hd(Enum.to_list(Mongo.find(@conn, @post_col, filter, [limit: 1])))
-  end
-
-
-  #group post delete
-  def deletePost(groupObjectId, postObjectId) do
-    filter = %{ "_id" => postObjectId, "groupId" => groupObjectId, "isActive" => true, "$or" => [%{"type" => "groupPost"}, %{"type" => "suggestionPost"}, %{"type" => "branchPost"}]}
-    update = %{ "$set" => %{ "isActive" => false } }
-    Mongo.update_one(@conn, @post_col, filter, update)
-  end
-
-
-  def removeNotificationFromGroup(postObjectId) do
-    filter = %{
-      "postId" => postObjectId
-    }
-    Mongo.delete_one(@conn, @saved_notifications_coll, filter)
-  end
-
-  def deleteGroupPost(groupObjectId) do
-    filter = %{
-      "groupId" => groupObjectId,
-      "isActive" => true,
-      "$or" => [
-        %{"type" => "groupPost"},
-        %{"type" => "specialPost"}
-      ]
-    }
-    update = %{
-      "$set" => %{
-        "updatedAt" => bson_time()
-      }
-    }
-    Mongo.update_one(@conn, @post_col, filter, update)
   end
 
 
@@ -262,6 +432,188 @@ defmodule GruppieWeb.Repo.GroupPostRepo do
     filter = %{ "_id" => cocObjectId, "groupId" => groupObjectId }
     update = %{ "$set" => %{ "isActive" => false } }
     Mongo.update_one(@conn, @coc_col, filter, update)
+  end
+
+
+
+  def getPostSaved(conn, groupObjectId, limit) do
+    query_params = conn.query_params
+    loginUser = Guardian.Plug.current_resource(conn)
+    filter = %{ "groupId" => groupObjectId, "userId" => loginUser["_id"] }
+    if !is_nil(query_params["page"]) do
+      pageNo = String.to_integer(query_params["page"])
+      skip = (pageNo - 1) * limit
+      pipeline = [ %{"$match" => filter}, %{"$sort" => %{ "_id" => -1 }}, %{"$skip" => skip}, %{"$limit" => limit} ]
+      Mongo.aggregate(@conn, @view_posts_saved_col, pipeline)
+      |> Enum.to_list()
+    else
+      pipeline = [ %{"$match" => filter}, %{"$sort" => %{ "_id" => -1 }} ]
+      Mongo.aggregate(@conn, @view_posts_saved_col, pipeline)
+      |> Enum.to_list()
+    end
+    # filter = %{ "groupId" => groupObjectId, "userId" => loginUser["_id"] }
+    # pipeline = [%{"$match" => filter}]
+    # Mongo.aggregate(@conn, @view_posts_saved_col, pipeline)
+  end
+
+
+  def findPostIsSaved(loginUserId, groupObjectId, postObjectId) do
+    filter = %{ "groupId" => groupObjectId, "userId" => loginUserId, "postId" => postObjectId }
+    project = %{"_id" => 1}
+    Mongo.count(@conn, @posts_saved_col, filter, [projection: project])
+  end
+
+
+  def getTotalPostsSavedCount(groupObjectId, loginUserId) do
+    filter = %{ "groupId" => groupObjectId, "userId" => loginUserId }
+    project = %{"_id" => 1}
+    Mongo.count(@conn, @posts_saved_col, filter, [projection: project])
+  end
+
+
+  def getTotalPostsCount(groupObjectId) do
+    filter = %{ "groupId" => groupObjectId, "isActive" =>  true }
+    project = %{"_id" => 1}
+    Mongo.count(@conn, @post_col, filter, [projection: project])
+  end
+
+
+  def checkUserAlreadyReportedPost(loginUser, group_id, post_id) do
+    loginUserId = loginUser["_id"]
+    groupObjectId = decode_object_id(group_id)
+    postObjectId = decode_object_id(post_id)
+    filter = %{ "groupId" => groupObjectId, "userId" => loginUserId, "postId" => postObjectId }
+    project = %{"_id" => 1}
+    Mongo.count(@conn, @post_report_col, filter, [projection: project])
+  end
+
+
+  def addPostReport(loginUser, reportType, group_id, post_id) do
+    loginUserId = loginUser["_id"]
+    groupObjectId = decode_object_id(group_id)
+    postObjectId = decode_object_id(post_id)
+    insertMap = %{ "userId" => loginUserId, "groupId" => groupObjectId, "postId" => postObjectId, "reportType" => String.to_integer(reportType) }
+    Mongo.insert_one(@conn, @post_report_col, insertMap)
+  end
+
+
+
+  def addToSchoolCalendar(loginUserId, groupObjectId, changeset, day, month, year) do
+    insert_doc = changeset
+                  |> update_map_with_key_value(:day, day)
+                  |> update_map_with_key_value(:month, month)
+                  |> update_map_with_key_value(:year, year)
+                  |> update_map_with_key_value(:userId, loginUserId)
+                  |> update_map_with_key_value(:groupId, groupObjectId)
+    Mongo.insert_one(@conn, @school_calendar_col, insert_doc)
+  end
+
+
+
+  def getSchoolCalendar(groupObjectId, month, year) do
+    filter = %{
+      "groupId" => groupObjectId,
+      "month" => month,
+      "year" => year,
+      "isActive" => true
+    }
+    Mongo.find(@conn, @school_calendar_col, filter)
+  end
+
+
+  def getSchoolCalendarEvent(groupObjectId, day, month, year) do
+    filter = %{
+      "groupId" => groupObjectId,
+      "day" => day,
+      "month" => month,
+      "year" => year,
+      "isActive" => true
+    }
+    Mongo.find(@conn, @school_calendar_col, filter)
+  end
+
+
+
+  def checkEventCreatedByLoginUser(loginUserId, groupObjectId, eventObjectId) do
+    filter = %{
+      "_id" => eventObjectId,
+      "groupId" => groupObjectId,
+      "userId" => loginUserId,
+    }
+    project = %{"_id" => 1}
+    Mongo.count(@conn, @school_calendar_col, filter, [projection: project])
+  end
+
+
+
+  def removeEventFromSchoolCalendar(groupObjectId, eventObjectId) do
+    filter = %{
+      "_id" => eventObjectId,
+      "groupId" => groupObjectId,
+    }
+    Mongo.delete_one(@conn, @school_calendar_col, filter)
+  end
+
+
+
+  def checkZoomKeysExist(groupObjectId, teamObjectId) do
+    filter = %{
+      "_id" => teamObjectId,
+      "groupId" => groupObjectId,
+      "class" => true,
+      "isActive" => true,
+      "zoomKey" => %{
+        "$exists" => true
+      },
+      "zoomSecret" => %{
+        "$exists" => true
+      }
+    }
+    project = %{"_id" => 1}
+    Mongo.count(@conn, @teams_col, filter, [projection: project])
+  end
+
+
+
+  def addZoomSecretKeysToClass(groupObjectId, teamObjectId, zoomKey, zoomSecret) do
+    filter = %{
+      "_id" => teamObjectId,
+      "groupId" => groupObjectId,
+      #"class" => true,
+      "isActive" => true
+    }
+    update = %{"$set" => %{"zoomKey" => zoomKey, "zoomSecret" => zoomSecret, "alreadyOnZoomLive" => false}}
+    Mongo.update_one(@conn, @teams_col, filter, update)
+  end
+
+
+  # / UP
+  defp getUserLastSeenTime(login_user_id, group_object_id) do
+    filter = %{
+      "groupId" => group_object_id,
+      "userId" => login_user_id,
+    }
+    project = %{ "_id" => 0, "groupPostLastSeen" => 1 }
+    find = Mongo.find(@conn, @group_team_members_col, filter, [projection: project])
+    hd(Enum.to_list(find))
+  end
+
+
+  def deleteGroupPost(groupObjectId) do
+    filter = %{
+      "groupId" => groupObjectId,
+      "isActive" => true,
+      "$or" => [
+        %{"type" => "groupPost"},
+        %{"type" => "specialPost"}
+      ]
+    }
+    update = %{
+      "$set" => %{
+        "updatedAt" => bson_time()
+      }
+    }
+    Mongo.update_one(@conn, @post_col, filter, update)
   end
 
 

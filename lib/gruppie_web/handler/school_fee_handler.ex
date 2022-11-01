@@ -570,4 +570,30 @@ defmodule GruppieWeb.Handler.SchoolFeeHandler do
       "dueAmount" => list.dueAmount - list.totalAmountPaid
     }
   end
+
+
+  def feeRevert(groupObjectId, teamObjectId, userObjectId, payment_id) do
+    feeDetails = SchoolFeeRepo.feeRevert(groupObjectId, teamObjectId, userObjectId, payment_id)
+    totalBalanceMap = if feeDetails do
+      %{
+        "totalAmountPaid" =>  feeDetails["totalAmountPaid"] - hd(feeDetails["feePaidDetails"])["amountPaid"],
+        "totalBalance" => hd(feeDetails["feePaidDetails"])["amountPaid"] + feeDetails["totalBalance"]
+      }
+    else
+      {:ok, "success"}
+    end
+    if Map.has_key?(feeDetails, "installmentPaymentDetails") do
+      installmentDetails = SchoolFeeRepo.revertInstallment(groupObjectId, teamObjectId, userObjectId, payment_id)
+      #reverting balance amount
+      if installmentDetails do
+        installmentPayment = hd(installmentDetails["installmentPaymentDetails"])
+        balance =  installmentPayment["balance"] + installmentPayment["paidAmount"]
+        SchoolFeeRepo.revertFeesAndInstallment(groupObjectId, teamObjectId, userObjectId, payment_id, totalBalanceMap, balance, installmentPayment["date"])
+      else
+        SchoolFeeRepo.revertFees(groupObjectId, teamObjectId, userObjectId, payment_id, totalBalanceMap)
+      end
+    else
+      SchoolFeeRepo.revertFees(groupObjectId, teamObjectId, userObjectId, payment_id, totalBalanceMap)
+    end
+  end
 end

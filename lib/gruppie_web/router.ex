@@ -174,7 +174,7 @@ defmodule GruppieWeb.Router do
       #add image to album in gallery
       put "/groups/:group_id/album/:album_id/add", GroupPostController, :galleryAlbumAdd #verified
       #remove image from album in gallery
-      put "/groups/:group_id/album/:album_id/remove", GroupPostController, :removeAlbumImage #verified
+      put "/groups/:group_id/album/:album_id/remove", GroupPostController, :removeAlbumImage #verifie
       #add vendors only admin and authorized users
       post "/groups/:group_id/vendors/add", GroupPostController, :vendorsAdd #verified
       #add code of conduct only admin and authorized users
@@ -197,10 +197,102 @@ defmodule GruppieWeb.Router do
       post "/groups/:group_id/class/add", GroupPostController, :addClassToSchool #verified
       #get classes from student register
       get "/groups/:group_id/class/get", GroupPostController, :getClasses #verified
+      #add staff to school (school category)
+      post "/groups/:group_id/staff/add", GroupPostController, :addStaffToSchool #verified
       #get school staff list (school category)
       get "/groups/:group_id/staff/get", GroupPostController, :getSchoolStaff #verified
       #get class students list
       get "/groups/:group_id/team/:team_id/students/get", GroupPostController, :getStudents #verified
+      #edit staff data
+      put "/groups/:group_id/staff/:user_id/edit", GroupPostController, :updateStaffData #verified
+      #edit student data
+      put "/groups/:group_id/team/:team_id/student/:user_id/edit", GroupPostController, :updateStudentData #verified
+      #remove student
+      delete "/groups/:group_id/team/:team_id/student/:user_id/delete", GroupPostController, :removeStudent #verified
+      #remove staff
+      delete "/groups/:group_id/staff/:user_id/delete", GroupPostController, :removeStaff #verified
+      #add bus to school category group
+      post "/groups/:group_id/bus/add", GroupPostController, :addBus #verified
+      #get buses from bus register
+      get "/groups/:group_id/bus/get", GroupPostController, :getBuses #verified
+      #add student to bus
+      post "/groups/:group_id/team/:team_id/student/add/bus", GroupPostController, :addStudentToBus #verified
+      #get bus students list
+      get "/groups/:group_id/team/:team_id/bus/students/get", GroupPostController, :getBusStudents #verified
+      #remove bus student
+      delete "/groups/:group_id/team/:team_id/student/:user_id/delete/bus", GroupPostController, :removeBusStudent #verified
+      ###**********OLD VERSION EBOOKS API START********#####
+      #register eBooks for school-class
+      post "/groups/:group_id/ebooks/register", GroupPostController, :eBooksRegister #verified
+      #get registered ebooks list(class list with ebooks) for admin/authorized user
+      get "/groups/:group_id/ebooks/get", GroupPostController, :eBooksGet #verified
+      #delete/remove registered ebooks from list
+      put "/groups/:group_id/ebook/:book_id/delete", GroupPostController, :deleteEbook #verified
+      ###**********NEW VERSION EBOOKS API START********#####
+      post "/groups/:group_id/team/:team_id/ebooks/add", GroupPostController, :addEbookForClass #verified
+      ##get EBooks for selected class/team
+      get "/groups/:group_id/team/:team_id/ebooks/get", GroupPostController, :getEbooksForTeam #verified
+      #remove ebook register
+      put "/groups/:group_id/team/:team_id/ebook/:ebook_id/remove", GroupPostController, :removeEbooksForTeam #verified
+      ###**********NEW VERSION EBOOKS API END********#####
+      #add list of classes to add subjects
+      post "/groups/:group_id/subjects/add", GroupPostController, :addSubjectForClass #verified
+      #get subject list of classes
+      get "/groups/:group_id/subjects/get", GroupPostController, :getSubjectsOfClass #verified
+      #update subjects for class
+      put "/groups/:group_id/subject/:subject_id/edit", GroupPostController, :updateSubjects #verified
+      #delete class subjects
+      delete "/groups/:group_id/subject/:subject_id/delete", GroupPostController, :deleteSubjects #verified
+      #add event to calendar (school category)
+      post "/groups/:group_id/school/calendar/add", GroupPostController, :schoolCalendarAdd #verified
+      #get calendar (school category)
+      get "/groups/:group_id/school/calendar/get", GroupPostController, :getSchoolCalendar #verified
+      #get calendar event (school category)
+      get "/groups/:group_id/school/calendar/event/get", GroupPostController, :getSchoolCalendarEvent #verified
+      #remove event/holiday from school calendar
+      delete "/groups/:group_id/event/:event_id/delete", GroupPostController, :removeEventFromSchoolCalendar #verified
+      #add token for the classes/teams where video class is required
+      post "/groups/:group_id/team/:team_id/jitsi/token/add", GroupPostController, :addJitsiLiveClassToken #verified
+      #get student wise class wise fee paid
+      get "/groups/:group_id/team/:team_id/student/fee/get", GroupPostController, :getStudentFeeListForClass #verified
+      #get fee status list of all recently approved/notApproved/onHold fee list
+      get "/groups/:group_id/fee/status/list", GroupPostController, :getFeeStatusList #verified
+      #get saved post
+      get "/groups/:group_id/posts/saved", GroupPostController, :getPostSaved #verified
+      #remove team user
+      put "/groups/:group_id/team/:team_id/user/:user_id/remove", TeamSettingsController, :removeTeamUser #verified
+      #leave team
+      put "/groups/:group_id/team/:team_id/leave", TeamSettingsController, :leaveTeam #verified
+      #team detail edit
+      put "/groups/:group_id/team/:team_id/edit", TeamSettingsController, :teamDetailEdit #verified
+      #allow users of team by adding users to group/team
+      put "/groups/:group_id/team/:team_id/user/add/allow", TeamSettingsController, :allowUserToAddUser #verified
+      #disallow users of team by adding users to group/team
+      put "/groups/:group_id/team/:team_id/user/add/disallow", TeamSettingsController, :disAllowUserToAddUser #verified
+      #allow/disallow users to add other users to the group
+      put "/groups/:group_id/team/:team_id/user/:user_id/user/add/disallow", TeamSettingsController, :allowOrDisallowUserToAddUser #verified
+      #allow/disallow users to add team post
+      put "/groups/:group_id/team/:team_id/user/:user_id/team/post/allow", TeamSettingsController, :allowOrDisallowUserToAddTeamPost #verified
+      #allow/disallow users to add team post
+      put "/groups/:group_id/team/:team_id/user/:user_id/team/comment/allow", TeamSettingsController, :allowOrDisallowUserToAddTeamPostComment #verified
+      #delete team when there is no users
+      delete "/groups/:group_id/team/:team_id/delete", TeamSettingsController, :deleteTeam #verified
+      #archive team when there is no users
+      put "/groups/:group_id/team/:team_id/archive", TeamSettingsController, :archiveTeam #verified
+      #get archive team list
+      get "/groups/:group_id/team/archive", TeamSettingsController, :getArchiveTeam #verified
+      #restore archive team
+      put "/groups/:group_id/team/:team_id/archive/restore", TeamSettingsController, :restoreArchiveTeam #verified
+      #get team settings
+      get "/groups/:group_id/team/:team_id/settings", TeamSettingsController, :teamSettings #verified
+      #allow everyone to post in team setting
+      put "/groups/:group_id/team/:team_id/allow/post/all", TeamSettingsController, :allowTeamPostAll #verified
+      #allow everyone to comment in team setting
+      put "/groups/:group_id/team/:team_id/allow/comment/all", TeamSettingsController, :allowTeamPostCommentAll #verified
+      #enable/disable gps for team
+      put "/groups/:group_id/team/:team_id/gps/enable", TeamSettingsController, :gpsEnable #verified
+      #enable/disable attendance for team
+      put "/groups/:group_id/team/:team_id/attendance/enable", TeamSettingsController, :attendanceEnable #verified
 
 
 

@@ -39,6 +39,8 @@ defmodule GruppieWeb.Repo.ConstituencyRepo do
 
   @groups_coll "groups"
 
+  @panchayat_coll "panchayat_database"
+
 
   def checkUserAlreadyInConstituency(userObjectId, groupObjectId) do
     filter = %{ "groupId" => groupObjectId, "userId" => userObjectId }
@@ -198,10 +200,24 @@ defmodule GruppieWeb.Repo.ConstituencyRepo do
     |> update_map_with_key_value(:committeeUpdatedAt, bson_time())
     |> update_map_with_key_value(:workersCount, 1)
     if Map.has_key?(changeset, :zpId) do
+      updateZp(decode_object_id(changeset.zpId))
       Map.put(changeset, :zpId, decode_object_id(changeset.zpId))
     else
       changeset
     end
+  end
+
+  def updateZp(zpObjectId) do
+    filter = %{
+      "_id" => zpObjectId,
+      "isActive" => true,
+    }
+    update = %{
+      "$set" => %{
+        "updatedAt" => bson_time()
+      }
+    }
+    Mongo.update_one(@conn, @panchayat_coll, filter, update)
   end
 
 

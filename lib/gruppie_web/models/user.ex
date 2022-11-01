@@ -119,40 +119,6 @@ defmodule GruppieWeb.User do
   end
 
 
-  #check phone is valid or not
-  defp valid_phone_number(struct) do
-    if struct.valid? do
-      countryCode = get_field(struct, :countryCode) #get_field used to get values from struct
-      phone = get_field(struct, :phone)
-      case ExPhoneNumber.parse(phone, countryCode) do
-        {:ok, phone_number} ->
-          e164_number = ExPhoneNumber.format(phone_number, :e164)
-          struct
-          |> delete_change(:countryCode)
-          |> put_change(:phone, e164_number)
-        {:error, _}->
-          add_error(struct, :phone, "Invalid CountryCode/Phone Given")
-      end
-    else
-      struct
-    end
-  end
-
-
-  def email_validation(struct) do
-    countryCode = get_field(struct, :countryCode)
-    email = get_field(struct, :email)
-    if countryCode != "IN" do
-      if is_nil(email) do
-        add_error(struct, :email, "Email Is Mandatory")
-      else
-        struct
-      end
-    else
-      struct
-    end
-  end
-
   #struct returned here is an elixir changeset not a user struct
   def changeset_user_register_individual(struct, params \\%{}) do
     state = if Map.has_key?(params, "state") do
@@ -184,6 +150,7 @@ defmodule GruppieWeb.User do
     |> searchName(params)
   end
 
+
   def changeset_verify_otp_individual(struct, params) do
     struct
     |> cast(params, @verify_otp_fields)
@@ -192,6 +159,7 @@ defmodule GruppieWeb.User do
     |> validate_required( :countryCode, [message: "Country Code Must Not Be Empty"] )
     |> valid_phone_number
   end
+
 
 
   #changeset on forgot password
@@ -205,7 +173,6 @@ defmodule GruppieWeb.User do
   end
 
 
-
   def changeset_user_update(changeset, params) do
     changeset
     |> cast(params, @update_fields)
@@ -214,7 +181,6 @@ defmodule GruppieWeb.User do
     |> set_time_updatedAt
     |> validate_not_nil(@update_fields)
   end
-
 
   def validate_not_nil(changeset, fields) do
     #IO.puts "#{changeset}"
@@ -229,6 +195,58 @@ defmodule GruppieWeb.User do
   end
 
 
+  #user add to team changeset
+  def changeset_add_friend(struct, params \\%{}) do
+     struct
+     |> cast(params, [:name, :countryCode, :phone, :email])
+     |> validate_required(:phone, [message: "Phone Number Must Not Be Empty"])
+     |> validate_required(:countryCode, [message: "Country Code Must Not Be Empty"])
+     |> validate_required(:name, [message: "Name Must Not Be Empty"])
+     |> email_validation
+     |> valid_phone_number
+     |> set_time
+  end
+
+
+  #student add to class changeset
+  def changeset_add_staff(struct, params \\%{}) do
+     struct
+     |> cast(params, [:name, :countryCode, :phone, :email])
+     |> email_validation
+     |> validate_required(:phone, [message: "Phone Number Must Not Be Empty"])
+     |> validate_required(:countryCode, [message: "Country Code Must Not Be Empty"])
+     |> validate_required(:name, [message: "Name Must Not Be Empty"])
+     |> valid_phone_number
+     |> set_time
+  end
+
+
+  #student add to class changeset
+  def changeset_add_student(struct, params \\%{}) do
+     struct
+     |> cast(params, [:name, :countryCode, :phone, :email, :rollNumber])
+     |> email_validation
+     |> validate_required(:rollNumber, [message: "Roll Number Must Not Be Empty"])
+     |> validate_required(:phone, [message: "Phone Number Must Not Be Empty"])
+     |> validate_required(:countryCode, [message: "Country Code Must Not Be Empty"])
+     |> validate_required(:name, [message: "Name Must Not Be Empty"])
+     |> valid_phone_number
+     |> set_time
+  end
+
+
+  #adding staff to database
+  def addStaffToDB(struct, params \\%{}) do
+    struct
+    |> cast(params, [:name, :email, :image, :gender, :staffId, :designation, :qualification,
+                     :class, :section, :doj, :address, :aadharNumber, :bloodGroup, :religion, :caste,
+                     :uanNumber, :panNumber, :bankAccountNumber, :bankName, :bankIfscCode, :staffType])
+    |> validate_required(:name, [message: "Name Must Not Be Empty"])
+    # |> validate_required(:staffType, [message: "Type Must Not Be Empty"])
+    |> set_time
+    |> put_change(:isActive, true)
+  end
+
   #update staff phone number
   def updateStudentStaffPhoneNumber(struct, params \\%{}) do
     struct
@@ -240,16 +258,26 @@ defmodule GruppieWeb.User do
   end
 
 
-  #user add to team changeset
-  def changeset_add_friend(struct, params \\%{}) do
+  #adding student to database
+  def addStudentToDB(struct, params \\%{}) do
     struct
-    |> cast(params, [:name, :countryCode, :phone, :email])
+    |> cast(params, [:name, :email, :image, :gender, :studentId, :admissionNumber, :rollNumber, :class,
+                     :section, :dob, :doj, :fatherName, :motherName, :fatherNumber, :motherNumber,
+                     :address, :aadharNumber, :bloodGroup, :religion, :caste])
+    |> validate_required(:name, [message: "Name Must Not Be Empty"])
+    |> set_time
+    |> put_change(:isActive, true)
+  end
+
+
+  #change mobile number changeset
+  def changeset_change_number(struct, params \\%{}) do
+    struct
+    |> cast(params, [:countryCode, :phone])
     |> validate_required(:phone, [message: "Phone Number Must Not Be Empty"])
     |> validate_required(:countryCode, [message: "Country Code Must Not Be Empty"])
-    |> validate_required(:name, [message: "Name Must Not Be Empty"])
-    |> email_validation
     |> valid_phone_number
-    |> set_time
+    |> valid_unique_number_on_register
   end
 
 
@@ -278,40 +306,40 @@ defmodule GruppieWeb.User do
 
 
 
-
   #check phone number already exists or not in database on registration
-  defp valid_unique_number_on_register(struct) do
-    if struct.valid? do
-      countryCode = get_field(struct, :countryCode) #get required valuen from struct
-      phone = get_field(struct, :phone)
-      case ExPhoneNumber.parse(phone, countryCode) do
-        {:ok, phone_number} ->
-          e164_number = ExPhoneNumber.format(phone_number, :e164)
-          case SecurityRepo.findUserExistByPhoneNumber(e164_number) do
-            {:ok, result} ->
-              if result > 0 do
-                add_error(struct, :phone, "Phone Number Already Exists")
-              else
-                struct
-                |> delete_change(:countryCode)
-                |> put_change(:phone, e164_number)
-              end
-          end
-        {:error, _}->
-          add_error(struct, :phone, "Invalid CountryCode/Phone Given")
-      end
-    else
-      struct
-    end
-  end
+   defp valid_unique_number_on_register(struct) do
+     if struct.valid? do
+       countryCode = get_field(struct, :countryCode) #get required valuen from struct
+       phone = get_field(struct, :phone)
+       case ExPhoneNumber.parse(phone, countryCode) do
+         {:ok, phone_number} ->
+           e164_number = ExPhoneNumber.format(phone_number, :e164)
+           case SecurityRepo.findUserExistByPhoneNumber(e164_number) do
+             {:ok, result} ->
+               if result > 0 do
+                 add_error(struct, :phone, "Phone Number Already Exists")
+               else
+                 struct
+                 |> delete_change(:countryCode)
+                 |> put_change(:phone, e164_number)
+               end
+           end
+         {:error, _}->
+           add_error(struct, :phone, "Invalid CountryCode/Phone Given")
+       end
+     else
+       struct
+     end
+   end
+
+
 
 
   defp set_time(struct) do
     struct
-    |> put_change(:insertedAt, bson_time())
-    |> put_change(:updatedAt, bson_time())
+    |> put_change( :insertedAt, bson_time() )
+    |> put_change( :updatedAt, bson_time() )
   end
-
 
   defp searchName(struct, params) do
     struct
@@ -326,6 +354,40 @@ defmodule GruppieWeb.User do
 
 
 
+  #check phone is valid or not
+  defp valid_phone_number(struct) do
+    if struct.valid? do
+      countryCode = get_field(struct, :countryCode) #get_field used to get values from struct
+      phone = get_field(struct, :phone)
+      case ExPhoneNumber.parse(phone, countryCode) do
+        {:ok, phone_number} ->
+          e164_number = ExPhoneNumber.format(phone_number, :e164)
+          struct
+          |> delete_change(:countryCode)
+          |> put_change(:phone, e164_number)
+        {:error, _}->
+          add_error(struct, :phone, "Invalid CountryCode/Phone Given")
+      end
+    else
+      struct
+    end
+  end
+
+
+
+  def email_validation(struct) do
+    countryCode = get_field(struct, :countryCode)
+    email = get_field(struct, :email)
+    if countryCode != "IN" do
+      if is_nil(email) do
+        add_error(struct, :email, "Email Is Mandatory")
+      else
+        struct
+      end
+    else
+      struct
+    end
+  end
 
 
 end

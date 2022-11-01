@@ -616,4 +616,91 @@ defmodule GruppieWeb.Repo.SchoolFeeRepo do
   def postFeeReminder(feePostList) do
     Mongo.insert_many(@conn, @post_coll, feePostList)
   end
+
+
+  def feeRevert(groupObjectId, teamObjectId, userObjectId, paymentId) do
+    filter = %{
+      "groupId" => groupObjectId,
+      "teamId" => teamObjectId,
+      "userId" => userObjectId,
+      "feePaidDetails.paymentId" => paymentId
+    }
+    project = %{
+      "feePaidDetails.$" => 1,
+      "totalAmountPaid" => 1,
+      "totalBalance" => 1,
+      "installmentPaymentDetails" => 1,
+      "_id" => 0,
+    }
+    Mongo.find_one(@conn, @school_fee_db_col, filter, [projection: project])
+  end
+
+
+  def revertInstallment(groupObjectId, teamObjectId, userObjectId, paymentId) do
+    filter = %{
+      "groupId" => groupObjectId,
+      "teamId" => teamObjectId,
+      "userId" => userObjectId,
+      "installmentPaymentDetails.transactionId" => paymentId
+    }
+    project = %{
+      "installmentPaymentDetails.$" => 1,
+      "_id" => 0,
+    }
+    Mongo.find_one(@conn, @school_fee_db_col, filter, [projection: project])
+  end
+
+
+  def revertFeesAndInstallment(groupObjectId, teamObjectId, userObjectId, paymentId, totalBalanceMap, balance, date) do
+    revertFees(groupObjectId, teamObjectId, userObjectId, paymentId, totalBalanceMap)
+    #reverting insatllment
+    installmentRevert(groupObjectId, teamObjectId, userObjectId, paymentId, balance, date)
+  end
+
+  def installmentRevert(groupObjectId, teamObjectId, userObjectId, paymentId, balance, date) do
+    filter = %{
+      "groupId" => groupObjectId,
+      "teamId" => teamObjectId,
+      "userId" => userObjectId,
+      "dueDates.date" => date
+    }
+    update = %{
+      "$set" => %{
+        "dueDates.$.balance" => balance,
+      },
+      "$unset" => %{
+        "dueDates.$.status" => "completed"
+      }
+    }
+    Mongo.update_one(@conn, @school_fee_db_col, filter, update)
+    filter = %{
+      "groupId" => groupObjectId,
+      "teamId" => teamObjectId,
+      "userId" => userObjectId,
+      "installmentPaymentDetails.transactionId" => paymentId
+    }
+    update = %{
+      "$set" => %{
+        "installmentPaymentDetails.$.revert" => true
+      }
+    }
+    Mongo.update_one(@conn, @school_fee_db_col, filter, update)
+  end
+
+  def revertFees(groupObjectId, teamObjectId, userObjectId, paymentId, totalBalanceMap) do
+    filter = %{
+      "groupId" => groupObjectId,
+      "teamId" => teamObjectId,
+      "userId" => userObjectId,
+      "feePaidDetails.paymentId" => paymentId
+    }
+    update = %{
+      "$set" => %{
+        "totalAmountPaid" => totalBalanceMap["totalAmountPaid"],
+        "totalBalance" => totalBalanceMap["totalBalance"],
+        "feePaidDetails.$.revert" => true
+      }
+    }
+    Mongo.update_one(@conn, @school_fee_db_col, filter, update)
+  end
 end
