@@ -24,19 +24,6 @@ defmodule GruppieWeb.Router do
     get "/", PageController, :index
   end
 
-
-  # scope "/api", GruppieWeb.Api, as: :api do
-  #   pipe_through [:browser, :api]
-  #   scope "/v1", V1, as: :v1 do
-  #   #get education from db
-  #   get "/education/get", ProfileController, :getEducation #verified
-  #   #get states
-  #   get "/gruppie/states/get", ProfileController, :getStates #verified
-  #   end
-
-
-  # end
-
   # Other scopes may use custom stacks.
   # scope "/api", GruppieWeb do
   #   pipe_through :api
@@ -277,8 +264,6 @@ defmodule GruppieWeb.Router do
       post "/groups/:group_id/team/:team_id/fee/reminder/add", SchoolFeeController, :postFeeReminder #verified
       #get due amount from database
       get "/groups/:group_id/team/:team_id/user/:user_id/due/get", SchoolFeeController, :getDue
-      #put fee revert
-      put "/groups/:group_id/team/:team_id/user/:user_id/payment/:payment_id/fee/revert", SchoolFeeController, :feeRevert
       ########################################### School-Fees  API's END #############################################################################################
 
       ######################################## Suggestion-Box API's Start ####################################################################################################
@@ -496,26 +481,6 @@ defmodule GruppieWeb.Router do
       ################################## Constituency-Analysis-API's END ###############################################################################
 
 
-      ################################## Voter-Analysis-API's Start ####################################################################################
-      #bulk csv api
-      post "/groups/:group_id/team/:team_id/constituency/voters/add/bulk", VoterAnalysisController, :addVotersToBoothBulk
-      #get booth voter details
-      get "/groups/:group_id/team/:team_id/constituency/booth/voters/get", VoterAnalysisController, :getVotersDetailsBooth
-      #delete voters ids
-      put "/groups/:group_id/team/:team_id/constituency/voter/delete", VoterAnalysisController, :deleteVoterFromList
-      #add voter to voters list
-      post "/groups/:group_id/team/:team_id/constituency/voter/add", VoterAnalysisController, :addVotersToList
-      #get booth discussion posts
-      get "/groups/:group_id/booths/posts/get", VoterAnalysisController, :getBoothPost
-      #workers get
-      get "/groups/:group_id/workers/get", VoterAnalysisController, :getWorkersList
-      #search api
-      get "/groups/:group_id/search/users/get", VoterAnalysisController, :getSearchUsers
-      #team users search
-      get "/groups/:group_id/team/:team_id/search/users/get", VoterAnalysisController, :getTeamSearchUsers
-      #################################  Voter-Analysis-API's END ######################################################################################
-
-
       ######################################## Community-category-list API's START ####################################################################
       #Add members to community teams
       post "/groups/:group_id/team/:team_id/user/add/community", CommunityController, :addMembersToBoothTeam #verified
@@ -551,6 +516,10 @@ defmodule GruppieWeb.Router do
       post "/groups/:group_id/add/public/team", CommunityController, :addPublicTeam
       ######################################## Community-category-list API's END ####################################################################
 
+
+
     end
+
   end
+
 end

@@ -460,4 +460,8 @@ defmodule GruppieWeb.Api.V1.GroupPostView do
     end)
     %{ data: list }
   end
+
+
+
+
 end

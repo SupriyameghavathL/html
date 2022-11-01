@@ -616,39 +616,4 @@ defmodule GruppieWeb.Repo.SchoolFeeRepo do
   def postFeeReminder(feePostList) do
     Mongo.insert_many(@conn, @post_coll, feePostList)
   end
-
-
-  def feeRevert(groupObjectId, teamObjectId, userObjectId, paymentId) do
-    filter = %{
-      "groupId" => groupObjectId,
-      "teamId" => teamObjectId,
-      "userId" => userObjectId,
-      "feePaidDetails.paymentId" => paymentId
-    }
-    project = %{
-      "feePaidDetails.$" => 1,
-      "totalAmountPaid" => 1,
-      "totalBalance" => 1,
-      "_id" => 0,
-    }
-    Mongo.find_one(@conn, @school_fee_db_col, filter, [projection: project])
-  end
-
-
-  def revertFees(groupObjectId, teamObjectId, userObjectId, paymentId, totalBalanceMap) do
-    filter = %{
-      "groupId" => groupObjectId,
-      "teamId" => teamObjectId,
-      "userId" => userObjectId,
-      "feePaidDetails.paymentId" => paymentId
-    }
-    update = %{
-      "$set" => %{
-        "totalAmountPaid" => totalBalanceMap["totalAmountPaid"],
-        "totalBalance" => totalBalanceMap["totalBalance"],
-        "feePaidDetails.$.revert" => true
-      }
-    }
-    Mongo.update_one(@conn, @school_fee_db_col, filter, update)
-  end
 end

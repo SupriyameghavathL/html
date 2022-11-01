@@ -601,7 +601,7 @@ defmodule GruppieWeb.Repo.SecurityRepo do
 
 
 
-  def checkInGroupTeamMembers(groupObjectId, user, constituencyName) do
+  def checkInGroupTeamMembers(groupObjectId, user) do
     filter = %{
       "groupId" => groupObjectId,
       "userId" => user["_id"],
@@ -611,11 +611,11 @@ defmodule GruppieWeb.Repo.SecurityRepo do
       "teams" => 1,
     }
     userTeamMap = Mongo.find_one(@conn, @group_team_members_col, filter, [projection: project])
-    checkTeamListExists(user, userTeamMap, groupObjectId, constituencyName)
+    checkTeamListExists(user, userTeamMap, groupObjectId)
   end
 
 
-  defp checkTeamListExists(user, userTeamMap, groupObjectId, constituencyName) do
+  defp checkTeamListExists(user, userTeamMap, groupObjectId) do
     userObjectId = user["_id"]
     if userTeamMap do
       if userTeamMap["teams"] != [] do
@@ -635,21 +635,11 @@ defmodule GruppieWeb.Repo.SecurityRepo do
         "insertedAt" => bson_time(),
         "updatedAt" => bson_time(),
       }
-      teamChangeset = if constituencyName != "" do
-        %{
-          name: user["name"]<>" Team",
-          insertedAt: bson_time(),
-          updatedAt: bson_time(),
-          category: "constituency",
-          constituencyName: constituencyName,
-        }
-      else
-        %{
-          name: user["name"]<>" Team",
-          insertedAt: bson_time(),
-          updatedAt: bson_time(),
-        }
-      end
+      teamChangeset = %{
+        name: user["name"]<>" Team",
+        insertedAt: bson_time(),
+        updatedAt: bson_time(),
+      }
       Mongo.insert_one(@conn, @group_team_members_col, insert_doc)
       TeamRepo.createTeam(user, teamChangeset, groupObjectId)
     end

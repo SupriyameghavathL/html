@@ -179,4 +179,8 @@ defmodule GruppieWeb.Api.V1.ProfileView do
 
     %{ data: list }
   end
+
+
+
+
 end

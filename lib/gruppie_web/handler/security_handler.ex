@@ -46,7 +46,7 @@ defmodule GruppieWeb.Handler.SecurityHandler do
         #  get groupId from groups coll
         groupId = SecurityRepo.getGroupId(constituencyName)
         #user Logged to app
-        SecurityRepo.checkInGroupTeamMembers(groupId["_id"], user, constituencyName)
+        SecurityRepo.checkInGroupTeamMembers(groupId["_id"], user)
         # set user_col with :caste, :subcaste, :category, :designation, :education, :image
         changeset = changeset
         |> Map.delete(:phone)
@@ -74,7 +74,7 @@ defmodule GruppieWeb.Handler.SecurityHandler do
         #  get groupId from groups coll
         groupId = SecurityRepo.getGroupIdByAppName(changeset.category, changeset.appName)
         #user Logged to app
-        SecurityRepo.checkInGroupTeamMembers(groupId["_id"], user, "")
+        SecurityRepo.checkInGroupTeamMembers(groupId["_id"], user)
         # set user_col with :caste, :subcaste, :category, :designation, :education, :image
         changeset = changeset
         |> Map.delete(:phone)

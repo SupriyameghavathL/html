@@ -22,7 +22,7 @@ defmodule Gruppie.MixProject do
     [
       mod: {Gruppie.Application, []},
       extra_applications: [:logger, :runtime_tools, :phoenix, :phoenix_html, :phoenix_live_reload, :plug_cowboy, :mongodb, :ex_phone_number,
-                           :comeonin, :timex, :bcrypt_elixir, :guardian, :httpoison, :phone, :date_time_parser, :csv]
+                           :comeonin, :timex, :bcrypt_elixir, :guardian, :httpoison, :phone, :date_time_parser]
     ]
   end
 
@@ -57,8 +57,7 @@ defmodule Gruppie.MixProject do
       {:httpoison, "~> 1.8"},
       {:phone, "~> 0.5.6"},
       {:recase, "~> 0.7.0"},
-      {:date_time_parser, "~> 1.1"},
-      {:csv, "~> 3.0"}
+      {:date_time_parser, "~> 1.1"}
     ]
   end
 
