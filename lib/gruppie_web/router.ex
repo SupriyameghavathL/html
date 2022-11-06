@@ -295,6 +295,190 @@ defmodule GruppieWeb.Router do
       put "/groups/:group_id/team/:team_id/attendance/enable", TeamSettingsController, :attendanceEnable #verified
 
 
+      #get all teams in group for login user
+      get "/groups/:id/teams", TeamController, :teams #verified
+      #get all teams in group for login user with icons seperated like today's activity, communication, dashboard etc..
+      get "/groups/:id/home", TeamController, :groupHomePage #verified
+      #get list of teams for video conference
+      get "/groups/:id/class/video/conference", TeamController, :videoConferenceTeams #verified
+      #add zoom meeting to group(school)
+      post "/groups/:id/zoom/token/add", TeamController, :addZoomMeetingToken #verified
+      #get list of zoom licensed version
+      get "/groups/:id/zoom/video/conference", TeamController, :zoomVideoConferenceTeams #verified
+      #get my teams in group for login user
+      get "/groups/:id/my/teams", TeamController, :myTeams #verified
+      #get class teams in group for login user
+      get "/groups/:id/my/class/teams", TeamController, :myClassTeams #verified
+      #get my kids list
+      get "/groups/:id/my/kids", TeamController, :myKids #verified
+      #add Friend to group manually
+      post "/groups/:id/team/create", TeamController, :createTeam #verified
+      #update zoom meeting id to team and zoom channel
+      put "/groups/:id/zoom/:zoom_id/start", TeamController, :startZoomLive #verified
+      #update zoom meeting id to team and zoom channel
+      put "/groups/:id/zoom/:zoom_id/stop", TeamController, :stopZoomLive #verified
+
+
+      #add members to team
+      post "/groups/:group_id/team/:team_id/user/add", TeamPostController, :addMembersToTeam #verified
+      #add members to team from contact
+      post "/groups/:group_id/team/:team_id/user/add/contact", TeamPostController, :addMembersToTeamFromContact #verified
+      #add members from student register and staff register (School category)
+      post "/groups/:group_id/team/:team_id/school/user/add", TeamPostController, :addSchoolUserToTeam #verified
+      #get channel team members list
+      get "/groups/:group_id/team/:team_id/users", TeamPostController, :getTeamUsers #verified
+      #get all team posts for login user
+      get "/groups/:group_id/team/:team_id/posts/get", TeamPostController, :index #verified
+      #Add/create post in team
+      post "/groups/:group_id/team/:team_id/posts/add", TeamPostController, :create #verified
+      #add subject vice posts/notes/videos for class/team (Video record class)
+      post "/groups/:group_id/team/:team_id/subject/:subject_id/posts/add", TeamPostController, :addSubjectWisePosts #verified
+      #add subject vice posts/notes/videos for class/team (Video record class)
+      get "/groups/:group_id/team/:team_id/subject/:subject_id/posts/get", TeamPostController, :getSubjectWisePosts #verified
+      #add status completed for students for each topics (provide Completed with checkbox below topics for only students)
+      put "/groups/:group_id/team/:team_id/subject/:subject_id/chapter/:chapter_id/topic/:topic_id/completed", TeamPostController, :addStatusCompletedToTopicsByStudent #verified
+      #add/update topics to chapter
+      put "/groups/:group_id/team/:team_id/subject/:subject_id/chapter/:chapter_id/topics/add", TeamPostController, :addTopicsToChapter #verified
+      #remove chapter or topics added to the subject
+      delete "/groups/:group_id/team/:team_id/subject/:subject_id/chapter/:chapter_id/remove", TeamPostController, :removeChapterOrTopicsAdded #verified
+      ######update jitsi token and live going time only by team admin or canPost=true
+      put "/groups/:group_id/team/:team_id/jitsi/start", TeamPostController, :startJitsiLive #verified
+      #update jitsi token and live going time only by team admin or canPost=true
+      post "/groups/:group_id/team/:team_id/live/start", TeamPostController, :startLiveClass #verified
+      ######student join to meeting (For online attendance)
+      put "/groups/:group_id/team/:team_id/jitsi/join", TeamPostController, :joinJitsiLive #verified
+      #student join to meeting (For online attendance)
+      put "/groups/:group_id/team/:team_id/live/join", TeamPostController, :joinLiveClass #verified
+      ######update jitsi token and live going time only by team admin or canPost=true
+      put "/groups/:group_id/team/:team_id/jitsi/stop", TeamPostController, :stopJitsiLive #verified
+      #end live class by team admin or canPost=true
+      put "/groups/:group_id/team/:team_id/live/end", TeamPostController, :endLiveClass #verified
+      #add online attendance for this class to firebase and send data to server
+      post "/groups/:group_id/team/:team_id/online/attendance/push", TeamPostController, :pushOnlineAttendance #verified
+      #get live attendance report only for admin/teacher on monthly basis
+      get "/groups/:group_id/team/:team_id/online/attendance/report", TeamPostController, :getOnlineAttendanceReport #verified ?month=1/2..12
+      #add time table for class team
+      post "/groups/:group_id/team/:team_id/timetable/add", TeamPostController, :addTimeTable #verified
+      #get time table
+      get "/groups/:group_id/timetable/get", TeamPostController, :getTimeTable #verified
+      #delete timetable
+      put "/groups/:group_id/timetable/:timetable_id/delete", TeamPostController, :deleteTimeTable #verified
+      #add/register subject to each classes with staffs array
+      post "/groups/:group_id/team/:team_id/subject/staff/add", TeamPostController, :addSubjectsWithStaff #verified
+      #get list of subject to each classes with staffs array
+      # get "/groups/:group_id/team/:team_id/subject/staff/get", TeamPostController, :getSubjectsWithStaff #verified
+      #remove subjectStaff added  (passing query_param: staffId will remove only staffs from selected subject)
+      delete "/groups/:group_id/team/:team_id/subject/:subject_id/remove", TeamPostController, :removeSubjectWithStaff #verified
+      #add/update staffs to subject
+      put "/groups/:group_id/team/:team_id/subject/:subject_id/staff/update", TeamPostController, :updateStaffToSubject #verified
+      #create fee for class/team
+      post "/groups/:group_id/team/:team_id/fee/create", TeamPostController, :createFeeForClass #verified
+      #update fee for class/team
+      put "groups/:group_id/team/:team_id/fee/edit", TeamPostController, :editFeesSchool
+      #get class wise fee created to update if needed
+      get "/groups/:group_id/team/:team_id/fee/get", TeamPostController, :getFeeForClass #verified
+      #get individual student wise class wise fee details
+      get "/groups/:group_id/team/:team_id/student/:user_id/fee/get", TeamPostController, :getIndividualStudentFee #verified
+      #add fee paid details from student side
+      # post "/groups/:group_id/team/:team_id/student/:user_id/fee/paid", TeamPostController, :addFeePaidDetailsByStudent #verified
+      #approve or keep on hold - by admin
+      put "/groups/:group_id/team/:team_id/student/:user_id/fee/:payment_id/approve", TeamPostController, :approveOrHoldFeePaidByStudent #verified
+      #update due date checkbox status by admin
+      put "/groups/:group_id/team/:team_id/student/:user_id/duedate/update", TeamPostController, :updateDueDateCheckBoxForStudent #verified
+      #update individual student fee
+      put "/groups/:group_id/team/:team_id/student/:user_id/fee/update", TeamPostController, :updateIndividualStudentFeeStructure #verified
+      #add fee paid details for students in class wise  ###OLD method
+      #####post "/groups/:group_id/team/:team_id/student/:studentDb_id/fee/paid/add", TeamPostController, :addFeePaidDetailsForStudent #verified
+      #add year academic timetable for each classes
+      post "/groups/:group_id/team/:team_id/year/timetable/add", TeamPostController, :addYearTimeTable #verified
+      #add subject with staff to selected day and period returned from above response
+      put "/groups/:group_id/team/:team_id/subject/:subject_with_staff_id/staff/:staff_id/year/timetable/add",
+            TeamPostController, :addYearTimeTableWithStaffAndSubject #verified
+      #get year time table added based on classes/team
+      get "/groups/:group_id/team/:team_id/year/timetable/get", TeamPostController, :getYearTimeTable #verified
+      #remove year time table added based on classes/team
+      delete "/groups/:group_id/team/:team_id/year/timetable/remove", TeamPostController, :removeYearTimeTable #verified
+      #school bus trip start
+      post "/groups/:group_id/team/:team_id/trip/start", TeamPostController, :tripStart #verified
+      #trip end
+      delete "/groups/:group_id/team/:team_id/trip/end", TeamPostController, :tripEnd #verified
+      #get trip location
+      get "/groups/:group_id/team/:team_id/trip/get", TeamPostController, :getTripLocation #verified
+      #get team users to attendance sheet
+      get "/groups/:group_id/team/:team_id/attendance/get", TeamPostController, :getAttendance #verified
+      #get team users to attendance sheet
+      get "/groups/:group_id/team/:team_id/attendance/get/preschool", TeamPostController, :getAttendancePreschool #verified
+      #send notification to get in kid
+      post "/groups/:group_id/team/:team_id/student/in", TeamPostController, :studentIn #verified
+      #send notification to get out kid
+      post "/groups/:group_id/team/:team_id/student/out", TeamPostController, :studentOut #verified
+      #send message to absenties
+      post "/groups/:group_id/team/:team_id/message/absenties", TeamPostController, :sendMessageToAbsenties #verified (Not user/not required)
+
+      ############# OFFLINE ATTENDANCE NEW START ###############################
+      #take attendance and send message to absentees
+      post "/groups/:group_id/team/:team_id/attendance/take", TeamPostController, :takeAttendanceAndReportParents #verified
+      #get offline attendance report for selected month
+      get "groups/:group_id/team/:team_id/offline/attendance/report/get", TeamPostController, :getOfflineAttendanceReport #verified
+      ############# OFFLINE ATTENDANCE NEW END ###############################
+
+      #get subjects based on team_id/class
+      get "/groups/:group_id/team/:team_id/subjects/get", TeamPostController, :getClassSubjects #verified
+      #create marks card
+      post "/groups/:group_id/team/:team_id/markscard/create", TeamPostController, :createMarksCard #verified
+      #get marks card list of class/team
+      get "/groups/:group_id/team/:team_id/markscard/get", TeamPostController, :getMarksCardList #verified
+      #get students list to upload markscard for selected exam
+      get "/groups/:group_id/team/:team_id/markscard/:markscard_id/students/get", TeamPostController, :getStudentsToUploadMarks #verified
+      #add marks to student
+      post "/groups/:group_id/team/:team_id/markscard/:markscard_id/student/:student_id/marks/add", TeamPostController, :addMarksToStudent #verified
+      #get marks card for student based on exams/marks card selection
+      get "/groups/:group_id/team/:team_id/student/:student_id/markscard/:markscard_id/get", TeamPostController, :getMarksCardForStudent #verified
+      #remove uploaded marks card for the student
+      put "/groups/:group_id/team/:team_id/student/:student_id/markscard/:markscard_id/remove", TeamPostController, :removeUploadedMarksForStudent #verified
+      #upload marks card for class students
+      post "/groups/:group_id/team/:team_id/student/:user_id/markscard/add", TeamPostController, :addMarksCard #verified
+      #get marks card
+      get "/groups/:group_id/team/:team_id/student/:user_id/markscard/get", TeamPostController, :getMarksCard #verified
+      #delete marks card
+      put "/groups/:group_id/team/:team_id/student/:user_id/markscard/:markscard_id/delete", TeamPostController, :deleteMarksCard #verified
+      #get class/teams for teacher to add assignment
+      get "/groups/:group_id/teacher/class/teams", TeamPostController, :getTeacherClassTeams #verified
+
+      ##########*********ASSIGNMENT API'S START***********###########
+      #create/add assignment for class
+      post "/groups/:group_id/team/:team_id/subject/:subject_id/assignment/add", TeamPostController, :addAssignment #verified
+      #get list of assignment added for class
+      get "/groups/:group_id/team/:team_id/subject/:subject_id/assignment/get", TeamPostController, :getAssignments #verified
+      #delete assignment added from teacher
+      put "/groups/:group_id/team/:team_id/subject/:subject_id/assignment/:assignment_id/delete", TeamPostController, :deleteAssignment #verified
+      #student submit assignment
+      post "/groups/:group_id/team/:team_id/subject/:subject_id/assignment/:assignment_id/submit", TeamPostController, :studentSubmitAssignment #verified
+      #get assignment submitted (For student only their assignment and for teacher verified, not verified and not submitted list)
+      get "/groups/:group_id/team/:team_id/subject/:subject_id/assignment/:assignment_id/get", TeamPostController, :getStudentSubmittedAssignment #verirfied
+      #delete still notVerified or not reassigned assignment by student
+      #(Provide delete option only for "canPost: false" in "getAssignments" API and "assignmentVerified: false" , "assignmentReassigned: false" in submitted assignment get API)
+      put "/groups/:group_id/team/:team_id/subject/:subject_id/assignment/:assignment_id/delete/:studentAssignment_id", TeamPostController, :deleteStudentSubmittedAssignment
+      #verify student submitted assignment
+      put "/groups/:group_id/team/:team_id/subject/:subject_id/assignment/:assignment_id/verify/:studentAssignment_id", TeamPostController, :verifyStudentSubmittedAssignment #verified
+
+      #create test for class/team
+      #post "/groups/:group_id/team/:team_id/test/create", TeamPostController, :createTestForClass #verified
+      #get attendance report for class students
+      # get "/groups/:group_id/team/:team_id/attendance/report/get", GroupPostController, :getAttendanceReport #verified
+      # #get attendance report for individual students
+      # get "/groups/:group_id/team/:team_id/user/:user_id/attendance/report/get", GroupPostController, :getIndividualStudentAttendanceReport #verified
+      # #leave request form get
+      # get "/groups/:group_id/team/:team_id/leave/request/form", TeamPostController, :getLeaveRequestForm
+      # #request for leave from parents to teacher
+      # post "/groups/:group_id/team/:team_id/leave/request", TeamPostController, :leaveRequest
+      #get nested friends teams
+      get "/groups/:group_id/team/:team_id/user/:user_id/teams", TeamPostController, :getNestedTeams #verified
+      #delete team post
+      put "/groups/:group_id/team/:team_id/post/:post_id/delete", TeamPostController, :deleteTeamPost #verified
+      #get team post read and unread users list
+      get "/groups/:group_id/team/:team_id/post/:post_id/read/unread", TeamPostController, :postReadUnread #verified
+
 
 
       ################################################ School-College-Register API ###########################################################

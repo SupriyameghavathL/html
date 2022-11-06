@@ -109,42 +109,65 @@ defmodule GruppieWeb.Api.V1.GroupView do
       "zoomMeetingId" => group["zoomMeetingId"],
       "zoomMeetingPassword" => group["zoomMeetingPassword"],
     }
-    if !is_nil(group["aboutGroup"]) do
-      Map.put_new(groupMap, "aboutGroup", group["aboutGroup"])
+    groupMap = if !is_nil(group["aboutGroup"]) do
+      groupMap
+      |> Map.put_new("aboutGroup", group["aboutGroup"])
+    else
+      groupMap
     end
-    if !is_nil(group["appVersion"]) do
-      Map.put_new(groupMap, "appVersion", group["appVersion"])
+    groupMap = if !is_nil(group["appVersion"]) do
+      groupMap
+      |> Map.put_new("appVersion", group["appVersion"])
+    else
+      groupMap
     end
-    if !is_nil(group["category"]) do
-      Map.put_new(groupMap, "category", group["category"])
+    groupMap = if !is_nil(group["category"]) do
+      groupMap
+      |> Map.put_new("category", group["category"])
+    else
+      groupMap
     end
-    if !is_nil(group["subCategory"]) do
-     Map.put_new(groupMap, "subCategory", group["subCategory"])
+    groupMap = if !is_nil(group["subCategory"]) do
+      groupMap
+      |> Map.put_new("subCategory", group["subCategory"])
+    else
+      groupMap
     end
-    if !is_nil(group["avatar"]) do
-      Map.put_new(groupMap, "image", group["avatar"])
+    groupMap = if !is_nil(group["avatar"]) do
+      groupMap
+      |> Map.put_new("image", group["avatar"])
+    else
+      groupMap
     end
     #check user is admin
-    if login_user["_id"] == group["adminId"] do
-       Map.put(groupMap, "isAdmin", true)
+    groupMap = if login_user["_id"] == group["adminId"] do
+      groupMap
+      |> Map.put("isAdmin", true)
+    else
+      groupMap
     end
     ###############  Check category of app ##################
-    cond do
+    groupMap = cond do
       #### if category = school
       group["category"] == "school" ->
+        groupMap = groupMap
+        |> Map.put("isTeacher", false)
+        |> Map.put("isStudent", false)
         # check isTeacher
         isTeacher = GroupRepo.checkIsTeacher(group["_id"], login_user["_id"])
         # check isStudent
         isStudent = GroupRepo.checkIsStudent(group["_id"], login_user["_id"])
-        if isTeacher do
-          Map.put(groupMap, "isTeacher", true)
+        groupMap = if isTeacher do
+          groupMap
+          |> Map.put("isTeacher", true)
         else
-          Map.put(groupMap, "isTeacher", false)
+          groupMap
         end
         if isStudent do
-          Map.put(groupMap, "isStudent", true)
+          groupMap
+          |> Map.put("isStudent", true)
         else
-          Map.put(groupMap, "isStudent", false)
+          groupMap
         end
       #### if category = constituency
       group["category"] == "constituency" ->
@@ -160,7 +183,7 @@ defmodule GruppieWeb.Api.V1.GroupView do
         |> Map.put("isBoothWorker", false)
         #3. check login user is booth president
         checkIsBoothPresident = GroupRepo.checkLoginUserIsBoothPresident(group["_id"], login_user["_id"])
-        if length(checkIsBoothPresident) > 0 do
+        groupMap = if length(checkIsBoothPresident) > 0 do
           groupMap = Map.put(groupMap, "isBoothPresident", true)
           groupMap = Map.put(groupMap, "boothCount", length(checkIsBoothPresident))
           #check how many booths and if more than 1 then just provide count. If equal to one then provide the boothId/teamId
@@ -168,11 +191,15 @@ defmodule GruppieWeb.Api.V1.GroupView do
             groupMap
             |> Map.put("boothId", fetch_id_from_object(hd(checkIsBoothPresident)["_id"]))
             |> Map.put("boothName", hd(checkIsBoothPresident)["name"])
+          else
+            groupMap
           end
+        else
+          groupMap
         end
         #4. check isBooth worker/ page pramukh
         checkIsBoothWorker = ConstituencyRepo.checkIsBoothWorker(login_user["_id"], group["_id"]) #check booth worker/page pramukh is having subBooths under him
-        if length(checkIsBoothWorker) > 0 do
+        groupMap = if length(checkIsBoothWorker) > 0 do
           #is page pramukh or booth worker
           groupMap = Map.put(groupMap, "isBoothWorker", true)
           groupMap = Map.put(groupMap, "subBoothCount", length(checkIsBoothWorker))
@@ -183,7 +210,11 @@ defmodule GruppieWeb.Api.V1.GroupView do
             #get members count for this one subBooth
             {:ok, subBoothMembersCount} = ConstituencyRepo.getTotalTeamMembersCount(group["_id"], hd(checkIsBoothWorker)["_id"])
             Map.put(groupMap, "subBoothMembers", subBoothMembersCount)
+          else
+            groupMap
           end
+        else
+          groupMap
         end
         #5. check isBoothMember
         {:ok, checkIsBoothMember} = ConstituencyRepo.checkIsBoothMember(login_user["_id"], group["_id"])
@@ -192,24 +223,36 @@ defmodule GruppieWeb.Api.V1.GroupView do
         #7. check user isDepartmentTaskForce
         {:ok, checkIsDepartmentPerson} = ConstituencyRepo.checkUserIsDepartmentPerson(login_user["_id"], group["_id"])
         #check login user isAdmin
-        if login_user["_id"] == group["adminId"] do
+        groupMap = if login_user["_id"] == group["adminId"] do
           Map.put(groupMap, "isAdmin", true)
+        else
+          groupMap
         end
-        if checkCanPost["canPost"] == true do
+        groupMap = if checkCanPost["canPost"] == true do
           Map.put(groupMap, "isAuthorizedUser", true)
+        else
+          groupMap
         end
-        if checkIsBoothMember > 0 do
+        groupMap = if checkIsBoothMember > 0 do
           Map.put(groupMap, "isBoothMember", true)
+        else
+          groupMap
         end
-        if checkIsPartyPerson > 0 do
+        groupMap = if checkIsPartyPerson > 0 do
           Map.put(groupMap, "isPartyTaskForce", true)
+        else
+          groupMap
         end
-        if checkIsDepartmentPerson > 0 do
+        groupMap = if checkIsDepartmentPerson > 0 do
           Map.put(groupMap, "isDepartmentTaskForce", true)
+        else
+          groupMap
         end
         if login_user["_id"] != group["adminId"] && checkCanPost["canPost"] == false && length(checkIsBoothPresident) == 0 && length(checkIsBoothWorker) == 0 &&
           checkIsBoothMember == 0 && checkIsPartyPerson == 0 && checkIsDepartmentPerson == 0 do
           Map.put(groupMap, "isPublic", true)
+        else
+          groupMap
         end
       #### if category = constituency
       group["category"] == "community" ->
@@ -224,19 +267,24 @@ defmodule GruppieWeb.Api.V1.GroupView do
         |> Map.put("isPublic", true)
         |> Map.put("isBoothWorker", false)
         #check login user isAdmin
-        if login_user["_id"] == group["adminId"] do
+        groupMap = if login_user["_id"] == group["adminId"] do
           Map.put(groupMap, "isAdmin", true)
+        else
+          groupMap
         end
-        if checkCanPost["canPost"] == true do
+        groupMap = if checkCanPost["canPost"] == true do
           Map.put(groupMap, "isAuthorizedUser", true)
+        else
+          groupMap
         end
         if login_user["_id"] == group["adminId"] || checkCanPost["canPost"] == true do
           Map.put(groupMap, "isPublic", false)
+        else
+          groupMap
         end
       true ->
         groupMap
     end
-
     %{ data: [ groupMap ] }
   end
 
@@ -293,7 +341,7 @@ defmodule GruppieWeb.Api.V1.GroupView do
     #get loginUser last inserted team time
     getLoginUserLastInsertedTeamTime = GroupRepo.getLoginUserLastInsertedTeamTime(loginUserId, groupObjectId)
     ######get login user last team updated at time from team_col
-    getLoginUserLastUpdatedTeamTime = ConstituencyRepo.getLoginUserLastUpdatedConstituencyTeamTime(userTeamIds)
+    getLoginUserLastUpdatedTeamTime = ConstituencyRepo.getLoginUserLastUpdatedConstituencyTeamTime(userTeamIds, groupObjectId)
     lastTeamUpdatedEventAt = if getLoginUserLastUpdatedTeamTime != [] do
       getLoginUserLastUpdatedTeamTime["updatedAt"]
     else
@@ -324,9 +372,11 @@ defmodule GruppieWeb.Api.V1.GroupView do
       "accessKey" => "NZZPHWUCQLCGPKDSWXHA",
       "secretKey" => "0BOBamyRMoWstLoX96aTg92Q9EMOZg9B7dXY/35BMn0"
     }
-    if group["trialEndPeriod"] do
+    teamCountMap = if group["trialEndPeriod"] do
       trailDaysPending = SchoolCollegeRegisterHandler.getTrailPeriodRemainingDays(group["trialEndPeriod"])
       Map.put_new(teamCountMap, "trailPeriodPending", trailDaysPending)
+    else
+      teamCountMap
     end
     ######listOfTeamsCount = [%{"teamsListCount" => teamCountMap}]
 
@@ -341,6 +391,147 @@ defmodule GruppieWeb.Api.V1.GroupView do
 
     %{data: [mergeMapFinal]}
   end
+
+
+
+
+  def render("group_events_community.json", %{loginUser: loginUser, group: group}) do
+    loginUserId = loginUser["_id"]
+    #get login user all teamIds for group
+    userTeamIds = GroupRepo.getUserTeamIds(group["_id"], loginUserId)
+    teamsCount = length(userTeamIds)
+    activeTeamForUserTeamIds = GroupRepo.getAllActiveIdsOfTeam(userTeamIds)  #get all active teamIds only
+    #create map for all the roles
+    roleMap = %{
+      "isAdmin" => false,
+      "isAuthorizedUser" => false,
+      "isBoothPresident" => false,
+      "isBoothMember" => false,
+      "isBoothWorker" => false,
+      "isPartyTaskForce" => false,
+      "isDepartmentTaskForce" => false,
+      "isPublic" => false,
+    }
+    #2. check login user is authorized user of group
+    checkCanPost = GroupRepo.checkUserCanPostInGroup(group["_id"], loginUserId)
+    #get roles of login user in constituency app for events
+    roleMap = if loginUserId == group["adminId"] do
+      Map.put(roleMap, "isAdmin", true)
+    else
+      roleMap
+    end
+    roleMap = if checkCanPost["canPost"] == true do
+      roleMap = Map.put(roleMap, "isAuthorizedUser", true)
+    else
+      roleMap
+    end
+    roleMap = if loginUserId != group["adminId"] && checkCanPost["canPost"] == false do
+      roleMap = Map.put(roleMap, "isPublic", true)
+    else
+      roleMap
+    end
+    #get anouncement post event at time
+    #########get last anouncement / last group post
+    lastAnouncementEventAt = ConstituencyRepo.getLastGroupPostEventFromEventCol(group["_id"])
+    #IO.puts "#{lastAnouncementEventAt}"
+    anouncementPostEvent = if !is_nil(lastAnouncementEventAt) do
+      lastAnouncementEventAt["eventAt"]
+    else
+      bson_time()
+    end
+    #########get last gallery post updated at time
+    lastGalleryPostEventAt = ConstituencyRepo.getLastGalleryPostUpdatedAtEventFromEventCol(group["_id"])
+    galleryPostEvent = if !is_nil(lastGalleryPostEventAt) do
+      lastGalleryPostEventAt["eventAt"]
+    else
+      bson_time()
+    end
+    #########get last banner updated event
+    bannerPostEventAt = if group["bannerUpdatedAt"] do
+      group["bannerUpdatedAt"]
+    else
+      bson_time()
+    end
+    ##########get last calendar post updatedAt time
+    lastCalendarEventAt = ConstituencyRepo.getLastCalendarEventUpdatedAtFromEventCol(group["_id"])
+    calendarEvent = if !is_nil(lastCalendarEventAt) do
+      lastCalendarEventAt["eventAt"]
+    else
+      bson_time()
+    end
+    #########get last profile updatedAt for login user
+    getLastProfileUpdatedEventAt = ConstituencyRepo.getUserProfileLastUpdatedAtEvent(loginUserId)
+    myProfileLastUpdatedEventAt = getLastProfileUpdatedEventAt["updatedAt"]
+    ######get login user last team inserted at time from grp_team_mem
+    getLoginUserLastInsertedTeamTime = GroupRepo.getLoginUserLastInsertedTeamTime(loginUserId, group["_id"])
+    ######get login user last team updated at time from team_col
+    getLoginUserLastUpdatedTeamTime = ConstituencyRepo.getLoginUserLastUpdatedConstituencyTeamTime(userTeamIds, group["_id"])
+    lastTeamUpdatedEventAt = if getLoginUserLastUpdatedTeamTime != [] do
+      getLoginUserLastUpdatedTeamTime["updatedAt"]
+    else
+      bson_time()
+    end
+    #####get login user last notification feed event at time // so to get teamPost notification event i need to pass activeTeamForUserTeamIds
+    getLastNotificationFeedEventAt = GroupRepo.getLatesNotificationUpdatedAtTime(group["_id"], loginUserId, activeTeamForUserTeamIds)
+    # lastNotificationFeedEventAt = if getLastNotificationFeedEventAt != [] do
+    #   getLastNotificationFeedEventAt["insertedAt"]
+    # else
+    #   bson_time()
+    # end
+    lastNotificationFeedEventAt = getLastNotificationFeedEventAt["insertedAt"]
+    #get dashboard team last post time, members count for login user
+    ####lastTeamPostEventAt = getHomePageTeamPostEventAtTime(activeTeamForUserTeamIds, group["_id"], loginUserId)
+    #IO.puts "#{lastTeamPostEventAt}"
+    #########get totalPostCount of login user###############
+    {:ok, postCount} = GroupRepo.getTotalPostCount(group["_id"], loginUserId)
+    #get community id from userCategoryApp
+    communityId = GroupRepo.getCommunityId(group["_id"], loginUserId)
+    #final result
+    communityEventMap = %{
+      "roles" => roleMap,
+      "announcementPostEventAt" => anouncementPostEvent,
+      "galleryPostEventAt" => galleryPostEvent,
+      "bannerPostEventAt" => bannerPostEventAt,
+      "calendarEventAt" => calendarEvent,
+      "notificationFeedEventAt" => lastNotificationFeedEventAt,
+      ##"homeTeamsLastPostEventAt" => lastTeamPostEventAt,
+      "homeTeamsLastPostEventAt" => [],
+      "myProfileUpdatedEventAt" => myProfileLastUpdatedEventAt,
+      "lastInsertedTeamTime" => getLoginUserLastInsertedTeamTime,
+      "lastUpdatedTeamTime" => lastTeamUpdatedEventAt,
+      "totalPostCount" => postCount,
+      "teamsCount" => teamsCount,
+      "userName" => loginUser["name"],
+      "userImage" => loginUser["image"],
+    }
+    communityEventMap = if communityId != %{} do
+      Map.put(communityEventMap, "userIdNumber", communityId["userCommunityId"])
+    else
+      Map.put(communityEventMap, "userIdNumber", group["appName"])
+    end
+    #school events - Send null|empty
+    schoolEventMapMap = %{
+      "teamsListCount" => %{
+        #digitalocea access keys
+        "secretKey" => "0BOBamyRMoWstLoX96aTg92Q9EMOZg9B7dXY/35BMn0",
+        "accessKey" => "NZZPHWUCQLCGPKDSWXHA",
+        "appVersion" => if group["appVersion"] do
+          trunc(group["appVersion"])
+        else
+          0
+        end
+      },
+      "subjectCountList" => [],
+      "imagePreviewUrl" => "https://ik.imagekit.io/mxfzvmvkayv/",
+      "eventList" => []
+    }
+    finalResult = Map.merge(communityEventMap, schoolEventMapMap)
+    #IO.puts "#{[finalResult]}"
+    %{ data: [ finalResult ] }
+  end
+
+
+
 
 
   def render("group_events_constituency.json", %{loginUserId: loginUserId, group: group}) do
@@ -466,7 +657,7 @@ defmodule GruppieWeb.Api.V1.GroupView do
     ######get login user last team inserted at time from grp_team_mem
     getLoginUserLastInsertedTeamTime = GroupRepo.getLoginUserLastInsertedTeamTime(loginUserId, group["_id"])
     ######get login user last team updated at time from team_col
-    getLoginUserLastUpdatedTeamTime = ConstituencyRepo.getLoginUserLastUpdatedConstituencyTeamTime(userTeamIds)
+    getLoginUserLastUpdatedTeamTime = ConstituencyRepo.getLoginUserLastUpdatedConstituencyTeamTime(userTeamIds, group["_id"])
     lastTeamUpdatedEventAt = if getLoginUserLastUpdatedTeamTime != [] do
       getLoginUserLastUpdatedTeamTime["updatedAt"]
     else
@@ -648,7 +839,7 @@ defmodule GruppieWeb.Api.V1.GroupView do
       "lastUserToTeamUpdatedAtEventAt" => lastUserToTeamUpdatedAtEventTime
     }
     #check team is booth category team to get events related to booths team
-    if team["category"] == "booth" do
+    map = if team["category"] == "booth" do
       #get last committeeUpdatedAt time event for booth team
       lastCommitteeForBoothUpdatedAt = ConstituencyRepo.lastCommitteeForBoothUpdatedAtEvent(groupObjectId, teamObjectId)
       lastCommitteeForBoothUpdatedAtEventTime = if lastCommitteeForBoothUpdatedAt != [] do
@@ -658,6 +849,8 @@ defmodule GruppieWeb.Api.V1.GroupView do
       end
       map
       |> Map.put_new("lastCommitteeForBoothUpdatedEventAt", lastCommitteeForBoothUpdatedAtEventTime)
+    else
+      map
     end
     #final result
     %{ data: [map] }
@@ -925,7 +1118,7 @@ defmodule GruppieWeb.Api.V1.GroupView do
         "talukImage" => k["image"],
         "groupCount" => length(getTalukGroups)
       }
-      if length(getTalukGroups) == 1 do
+      map = if length(getTalukGroups) == 1 do
         map
         |> Map.put_new("groupId", fetch_id_from_object(hd(getTalukGroups)["_id"]))
         |> Map.put_new("groupName", hd(getTalukGroups)["name"])
@@ -939,6 +1132,8 @@ defmodule GruppieWeb.Api.V1.GroupView do
         checkCanPost = GroupRepo.checkUserCanPostInGroup(hd(getTalukGroups)["_id"], loginUser["_id"])
         map
         |> Map.put_new("canPost", checkCanPost["canPost"])
+      else
+        map
       end
       acc ++ [map]
     end)

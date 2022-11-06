@@ -58,7 +58,7 @@ defmodule Gruppie.MixProject do
       {:phone, "~> 0.5.6"},
       {:recase, "~> 0.7.0"},
       {:date_time_parser, "~> 1.1"},
-      {:csv, "~> 3.0"}
+      {:csv, "~> 2.4"},
     ]
   end
 

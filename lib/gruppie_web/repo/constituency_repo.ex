@@ -291,9 +291,10 @@ defmodule GruppieWeb.Repo.ConstituencyRepo do
 
 
 
-  def getLoginUserLastUpdatedConstituencyTeamTime(teamIdsList) do
+  def getLoginUserLastUpdatedConstituencyTeamTime(teamIdsList, groupObjectId) do
     filter = %{
       "_id" => %{"$in" => teamIdsList},
+      "groupId" => groupObjectId,
       "isActive" => true
     }
     project = %{"_id" => 0, "updatedAt" => 1}

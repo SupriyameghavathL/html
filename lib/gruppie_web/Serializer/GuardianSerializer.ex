@@ -19,8 +19,8 @@ defmodule GruppieWeb.Serializer.GuardianSerializer do
 
  def resource_from_claims(claims) do
   map = claims["sub"]
-  login_user_id = BSON.ObjectId.decode!(map["id"])
-  resource = UserRepo.find_by_id(login_user_id, map["password"])
+  #login_user_id = map["id"]
+  resource = UserRepo.find_by_id(map["id"], map["password"])
   resource
  end
 
